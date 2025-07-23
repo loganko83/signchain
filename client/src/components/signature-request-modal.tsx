@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Send, X, Users, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import WorkflowBuilder from "./workflow-builder";
+import { CalendarIcon, Send, X, Users, Clock, Workflow, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Document, insertSignatureRequestSchema } from "@shared/schema";
@@ -31,7 +35,19 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
   const [isSequential, setIsSequential] = useState(false);
   const [signatureOrder, setSignatureOrder] = useState(1);
   const [deadlineType, setDeadlineType] = useState<string>("none");
+  const [useWorkflow, setUseWorkflow] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [workflowBuilderOpen, setWorkflowBuilderOpen] = useState(false);
   const { toast } = useToast();
+
+  const { data: workflowTemplates = [] } = useQuery({
+    queryKey: ["/api/workflow-templates"],
+    queryFn: async () => {
+      const response = await fetch("/api/workflow-templates?userId=1"); // Should use current user
+      if (!response.ok) throw new Error("템플릿을 가져올 수 없습니다");
+      return response.json();
+    },
+  });
 
   const createRequestMutation = useMutation({
     mutationFn: async (data: {
@@ -71,6 +87,8 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
     setIsSequential(false);
     setSignatureOrder(1);
     setDeadlineType("none");
+    setUseWorkflow(false);
+    setSelectedTemplate("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

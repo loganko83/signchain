@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema, insertSignatureSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema, insertSignatureSchema, insertWorkflowTemplateSchema } from "@shared/schema";
 import { sendSignatureRequestEmail, sendCompletionEmail } from "./email";
 import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-generator";
 import crypto from "crypto";
@@ -367,6 +367,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Document download error:', error);
       res.status(500).json({ message: "문서 다운로드 중 오류가 발생했습니다" });
+    }
+  });
+
+  // Workflow template routes
+  app.get("/api/workflow-templates", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (!userId) {
+        return res.status(400).json({ message: "사용자 ID가 필요합니다" });
+      }
+      
+      const templates = await storage.getWorkflowTemplatesByUser(userId);
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "워크플로우 템플릿을 가져오는 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/workflow-templates", async (req: Request, res: Response) => {
+    try {
+      const templateData = insertWorkflowTemplateSchema.parse(req.body);
+      const template = await storage.createWorkflowTemplate(templateData);
+      
+      // Create audit log
+      await storage.createAuditLog({
+        documentId: null,
+        userId: templateData.createdBy,
+        action: "워크플로우 템플릿 생성",
+        description: `새로운 워크플로우 템플릿 "${templateData.name}"을 생성했습니다`,
+        metadata: { templateId: template.id, stepCount: (templateData.steps as any)?.steps?.length || 0 },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "워크플로우 템플릿 생성 중 오류가 발생했습니다" });
+    }
+  });
+
+  // Workflow execution routes
+  app.post("/api/workflows/create", async (req: Request, res: Response) => {
+    try {
+      const { templateId, documentId, requesterId } = req.body;
+      
+      if (!templateId || !documentId || !requesterId) {
+        return res.status(400).json({ message: "필수 필드가 누락되었습니다" });
+      }
+      
+      const workflowId = await storage.createWorkflowFromTemplate(
+        parseInt(templateId), 
+        parseInt(documentId), 
+        parseInt(requesterId)
+      );
+      
+      // Create audit log
+      await storage.createAuditLog({
+        documentId: parseInt(documentId),
+        userId: parseInt(requesterId),
+        action: "협업 워크플로우 시작",
+        description: `템플릿을 사용하여 새로운 협업 워크플로우를 시작했습니다`,
+        metadata: { workflowId, templateId },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json({ workflowId });
+    } catch (error) {
+      console.error('Workflow creation error:', error);
+      res.status(500).json({ message: "워크플로우 생성 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.get("/api/workflows/:workflowId/status", async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.workflowId;
+      const status = await storage.getWorkflowStatus(workflowId);
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ message: "워크플로우 상태를 가져오는 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/signature-requests/:id/approve", async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { approverId } = req.body;
+      
+      if (!approverId) {
+        return res.status(400).json({ message: "승인자 ID가 필요합니다" });
+      }
+      
+      await storage.approveSignatureRequest(requestId, parseInt(approverId));
+      
+      // Create audit log
+      await storage.createAuditLog({
+        documentId: null, // Would need to get from request
+        userId: parseInt(approverId),
+        action: "서명 요청 승인",
+        description: `서명 요청을 승인했습니다`,
+        metadata: { requestId },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json({ message: "서명 요청이 승인되었습니다" });
+    } catch (error) {
+      res.status(500).json({ message: "승인 처리 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/signature-requests/:id/reject", async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { approverId, reason } = req.body;
+      
+      if (!approverId || !reason) {
+        return res.status(400).json({ message: "승인자 ID와 거부 사유가 필요합니다" });
+      }
+      
+      await storage.rejectSignatureRequest(requestId, parseInt(approverId), reason);
+      
+      // Create audit log
+      await storage.createAuditLog({
+        documentId: null, // Would need to get from request
+        userId: parseInt(approverId),
+        action: "서명 요청 거부",
+        description: `서명 요청을 거부했습니다: ${reason}`,
+        metadata: { requestId, reason },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json({ message: "서명 요청이 거부되었습니다" });
+    } catch (error) {
+      res.status(500).json({ message: "거부 처리 중 오류가 발생했습니다" });
     }
   });
 

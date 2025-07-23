@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import Navigation from "@/components/navigation";
 import DocumentViewer from "@/components/document-viewer";
 import UploadModal from "@/components/upload-modal";
-import SignatureRequestModal from "@/components/signature-request-modal";
+import CollaborationModal from "@/components/collaboration-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -269,7 +269,7 @@ export default function Documents() {
       />
       
       {signatureRequestDocument && (
-        <SignatureRequestModal
+        <CollaborationModal
           document={signatureRequestDocument}
           open={signatureRequestModalOpen}
           onOpenChange={setSignatureRequestModalOpen}

@@ -53,7 +53,38 @@ export const signatureRequests = pgTable("signature_requests", {
   reminderSent: boolean("reminder_sent").default(false).notNull(),
   status: text("status").notNull().default("대기"),
   shareToken: text("share_token").notNull().unique(),
+  workflowId: text("workflow_id"), // Groups related signature requests
+  approvalRequired: boolean("approval_required").default(false).notNull(),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// New table for workflow templates
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdBy: integer("created_by").notNull(),
+  steps: jsonb("steps").notNull(), // Array of workflow steps
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// New table for document collaborators
+export const documentCollaborators = pgTable("document_collaborators", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  userId: integer("user_id"),
+  email: text("email").notNull(),
+  name: text("name"),
+  role: text("role").notNull(), // 'signer', 'reviewer', 'approver', 'viewer'
+  permissions: jsonb("permissions"), // Custom permissions object
+  addedBy: integer("added_by").notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
 });
 
 export const auditLogs = pgTable("audit_logs", {
@@ -104,6 +135,25 @@ export const insertSignatureRequestSchema = createInsertSchema(signatureRequests
   signatureOrder: true,
   isSequential: true,
   shareToken: true,
+  workflowId: true,
+  approvalRequired: true,
+});
+
+export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates).pick({
+  name: true,
+  description: true,
+  createdBy: true,
+  steps: true,
+});
+
+export const insertDocumentCollaboratorSchema = createInsertSchema(documentCollaborators).pick({
+  documentId: true,
+  userId: true,
+  email: true,
+  name: true,
+  role: true,
+  permissions: true,
+  addedBy: true,
 });
 
 export const loginSchema = z.object({
@@ -119,5 +169,9 @@ export type InsertSignature = z.infer<typeof insertSignatureSchema>;
 export type Signature = typeof signatures.$inferSelect;
 export type InsertSignatureRequest = z.infer<typeof insertSignatureRequestSchema>;
 export type SignatureRequest = typeof signatureRequests.$inferSelect;
+export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertDocumentCollaborator = z.infer<typeof insertDocumentCollaboratorSchema>;
+export type DocumentCollaborator = typeof documentCollaborators.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type LoginData = z.infer<typeof loginSchema>;

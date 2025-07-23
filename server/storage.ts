@@ -4,6 +4,8 @@ import {
   signatures, 
   signatureRequests, 
   auditLogs,
+  workflowTemplates,
+  documentCollaborators,
   type User, 
   type InsertUser,
   type Document,
@@ -12,7 +14,11 @@ import {
   type InsertSignature,
   type SignatureRequest,
   type InsertSignatureRequest,
-  type AuditLog
+  type AuditLog,
+  type WorkflowTemplate,
+  type InsertWorkflowTemplate,
+  type DocumentCollaborator,
+  type InsertDocumentCollaborator
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -47,6 +53,17 @@ export interface IStorage {
   // Audit log methods
   createAuditLog(log: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog>;
   getAuditLogsByDocument(documentId: number): Promise<AuditLog[]>;
+  
+  // Workflow template methods
+  getWorkflowTemplate(id: number): Promise<WorkflowTemplate | undefined>;
+  getWorkflowTemplatesByUser(userId: number): Promise<WorkflowTemplate[]>;
+  createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate>;
+  
+  // Workflow execution methods
+  createWorkflowFromTemplate(templateId: number, documentId: number, requesterId: number): Promise<string>; // Returns workflowId
+  getWorkflowStatus(workflowId: string): Promise<{ completed: number; total: number; currentStep?: SignatureRequest }>;
+  approveSignatureRequest(requestId: number, approverId: number): Promise<void>;
+  rejectSignatureRequest(requestId: number, approverId: number, reason: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -181,6 +198,87 @@ export class DatabaseStorage implements IStorage {
       .from(auditLogs)
       .where(eq(auditLogs.documentId, documentId))
       .orderBy(auditLogs.timestamp);
+  }
+
+  // Workflow template methods
+  async getWorkflowTemplate(id: number): Promise<WorkflowTemplate | undefined> {
+    const [template] = await db.select().from(workflowTemplates).where(eq(workflowTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getWorkflowTemplatesByUser(userId: number): Promise<WorkflowTemplate[]> {
+    return await db.select().from(workflowTemplates).where(eq(workflowTemplates.createdBy, userId));
+  }
+
+  async createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate> {
+    const [result] = await db
+      .insert(workflowTemplates)
+      .values(template)
+      .returning();
+    return result;
+  }
+
+  // Workflow execution methods
+  async createWorkflowFromTemplate(templateId: number, documentId: number, requesterId: number): Promise<string> {
+    const template = await this.getWorkflowTemplate(templateId);
+    if (!template) throw new Error("Workflow template not found");
+    
+    const workflowId = `workflow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const steps = template.steps as any;
+    
+    if (steps.steps && Array.isArray(steps.steps)) {
+      for (const step of steps.steps) {
+        await this.createSignatureRequest({
+          documentId,
+          requesterId,
+          signerEmail: step.email,
+          signerName: step.name,
+          signatureOrder: step.order,
+          isSequential: steps.isSequential || false,
+          workflowId,
+          approvalRequired: step.type === 'approver',
+          shareToken: `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          deadline: step.deadline ? new Date(Date.now() + parseInt(step.deadline) * 24 * 60 * 60 * 1000) : undefined,
+        });
+      }
+    }
+    
+    return workflowId;
+  }
+
+  async getWorkflowStatus(workflowId: string): Promise<{ completed: number; total: number; currentStep?: SignatureRequest }> {
+    const requests = await db.select().from(signatureRequests).where(eq(signatureRequests.workflowId, workflowId));
+    const completed = requests.filter(r => r.status === "완료").length;
+    const currentStep = requests.find(r => r.status === "대기");
+    
+    return {
+      completed,
+      total: requests.length,
+      currentStep: currentStep || undefined
+    };
+  }
+
+  async approveSignatureRequest(requestId: number, approverId: number): Promise<void> {
+    await db
+      .update(signatureRequests)
+      .set({ 
+        status: "승인됨",
+        approvedBy: approverId,
+        approvedAt: new Date()
+      })
+      .where(eq(signatureRequests.id, requestId));
+  }
+
+  async rejectSignatureRequest(requestId: number, approverId: number, reason: string): Promise<void> {
+    await db
+      .update(signatureRequests)
+      .set({ 
+        status: "거부됨",
+        rejectedBy: approverId,
+        rejectedAt: new Date(),
+        rejectionReason: reason
+      })
+      .where(eq(signatureRequests.id, requestId));
   }
 }
 

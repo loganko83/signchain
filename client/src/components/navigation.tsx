@@ -19,8 +19,8 @@ export default function Navigation() {
   const navItems = [
     { href: "/dashboard", label: "대시보드", icon: Home },
     { href: "/documents", label: "문서 관리", icon: FileText },
+    { href: "/verification", label: "블록체인 검증", icon: Shield },
     { href: "/templates", label: "템플릿", icon: LayoutTemplate },
-    { href: "/audit", label: "감사로그", icon: Shield },
   ];
 
   if (!isAuthenticated) {

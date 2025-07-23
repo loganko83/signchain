@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import Documents from "@/pages/documents";
+import Verification from "@/pages/verification";
 import SignDocument from "@/pages/sign-document";
 import NotFound from "@/pages/not-found";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/documents" component={Documents} />
+      <Route path="/verification" component={Verification} />
       <Route path="/sign/:token" component={SignDocument} />
       <Route component={NotFound} />
     </Switch>

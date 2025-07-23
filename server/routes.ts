@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema, insertSignatureSchema } from "@shared/schema";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -268,6 +268,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(signature);
     } catch (error) {
       res.status(500).json({ message: "서명 처리 중 오류가 발생했습니다" });
+    }
+  });
+
+  // Get signature requests by token
+  app.get("/api/signature-requests/token/:token", async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const request = await storage.getSignatureRequestByToken(token);
+      if (!request) {
+        return res.status(404).json({ error: "서명 요청을 찾을 수 없습니다" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Get signature request by token error:", error);
+      res.status(500).json({ error: "서명 요청을 가져오는 중 오류가 발생했습니다" });
     }
   });
 

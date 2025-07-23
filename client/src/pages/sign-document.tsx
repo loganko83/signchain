@@ -1,262 +1,277 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "wouter";
-import Navigation from "@/components/navigation";
-import SignaturePad from "@/components/signature-pad";
-import DocumentViewer from "@/components/document-viewer";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useRoute } from "wouter";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Signature, Eye, Download, Clock } from "lucide-react";
-import { useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText, Shield, Calendar, User, Clock, CheckCircle, PenTool } from "lucide-react";
+import { Document, SignatureRequest } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { generateMockTxHash, generateMockBlockNumber } from "@/lib/blockchain";
-
-interface SignatureRequestData {
-  request: any;
-  document: any;
-}
+import SignaturePad from "@/components/signature-pad";
+import { generateFileHash } from "@/lib/crypto";
 
 export default function SignDocument() {
-  const { token } = useParams();
+  const [, params] = useRoute("/sign/:token");
+  const token = params?.token;
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [signatureType, setSignatureType] = useState("draw");
-  const [signatureData, setSignatureData] = useState<string>("");
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-  const { data, isLoading, error } = useQuery<SignatureRequestData>({
+  // Get signature request by token
+  const { data: signatureRequest, isLoading: requestLoading } = useQuery<SignatureRequest>({
     queryKey: ["/api/signature-requests/token", token],
     queryFn: async () => {
       const response = await fetch(`/api/signature-requests/token/${token}`);
-      if (!response.ok) {
-        throw new Error("서명 요청을 찾을 수 없습니다");
-      }
+      if (!response.ok) throw new Error("서명 요청을 찾을 수 없습니다");
       return response.json();
     },
     enabled: !!token,
   });
 
-  const signatureMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/signatures", data);
+  // Get document details
+  const { data: document, isLoading: documentLoading } = useQuery<Document>({
+    queryKey: ["/api/documents", signatureRequest?.documentId],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/${signatureRequest?.documentId}`);
+      if (!response.ok) throw new Error("문서를 가져올 수 없습니다");
       return response.json();
     },
+    enabled: !!signatureRequest?.documentId,
+  });
+
+  // Create signature mutation
+  const createSignatureMutation = useMutation({
+    mutationFn: async (data: {
+      documentId: number;
+      signerId: number;
+      signerEmail: string;
+      signatureData: string;
+      signatureType: "canvas" | "text";
+    }) => {
+      return apiRequest("/api/signatures", "POST", data);
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/signature-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       toast({
         title: "서명 완료",
-        description: "문서 서명이 완료되고 블록체인에 기록되었습니다.",
+        description: "문서에 성공적으로 서명했습니다.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/signature-requests/token", token] });
+      setShowSignaturePad(false);
     },
     onError: (error: any) => {
       toast({
         title: "서명 실패",
-        description: error.message || "서명 처리 중 오류가 발생했습니다.",
+        description: error.message || "서명 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     },
   });
 
-  const handleCompleteSignature = () => {
-    if (!signatureData || !data) {
-      toast({
-        title: "서명 필요",
-        description: "먼저 서명을 작성해주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleSignature = async (signatureData: string, signatureType: "canvas" | "text") => {
+    if (!signatureRequest || !document) return;
 
-    signatureMutation.mutate({
-      documentId: data.document.id,
-      signerId: 1, // Mock user ID
-      signerEmail: data.request.signerEmail,
-      signatureData,
-      signatureType,
-    });
+    setIsSubmitting(true);
+    try {
+      // Generate blockchain transaction hash (mock)
+      const blockchainTxHash = `0x${Math.random().toString(16).substr(2, 16)}`;
+
+      await createSignatureMutation.mutateAsync({
+        documentId: document.id,
+        signerId: 1, // This should come from current user context
+        signerEmail: signatureRequest.signerEmail,
+        signatureData,
+        signatureType,
+      });
+    } catch (error) {
+      console.error("Signature error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (isLoading) {
+  if (requestLoading || documentLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="flex items-center justify-center py-24">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-4 text-gray-600">문서를 불러오는 중...</p>
-          </div>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">로딩 중...</div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (!signatureRequest || !document) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-2xl mx-auto px-4 py-24">
-          <Alert variant="destructive">
-            <AlertDescription>
-              서명 요청을 찾을 수 없거나 만료되었습니다.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <Alert>
+          <AlertDescription>
+            유효하지 않은 서명 링크입니다. 서명 요청을 다시 확인해주세요.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
-  const { request, document } = data;
+  const isExpired = signatureRequest.deadline && new Date(signatureRequest.deadline) < new Date();
+  const isCompleted = signatureRequest.status === "완료";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">문서 서명</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {document.title} 문서의 서명을 요청받았습니다
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
+            <FileText className="h-8 w-8" />
+            문서 서명 요청
+          </h1>
+          <p className="text-muted-foreground">
+            다음 문서에 대한 디지털 서명이 요청되었습니다
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Document Viewer */}
-          <div className="lg:col-span-2">
-            <DocumentViewer 
-              document={document}
-              signatureData={isPreviewMode ? signatureData : undefined}
-            />
-          </div>
+        {/* Status Alert */}
+        {isCompleted && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              이 문서는 이미 서명이 완료되었습니다.
+            </AlertDescription>
+          </Alert>
+        )}
 
-          {/* Signing Tools */}
-          <div className="space-y-6">
-            {/* Request Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">서명 요청 정보</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">요청자</Label>
-                  <p className="text-sm text-gray-900">{request.signerName || request.signerEmail}</p>
-                </div>
-                {request.message && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">메시지</Label>
-                    <p className="text-sm text-gray-900">{request.message}</p>
-                  </div>
-                )}
-                {request.deadline && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">마감일</Label>
-                    <p className="text-sm text-gray-900 flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {new Date(request.deadline).toLocaleDateString('ko-KR')}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        {isExpired && !isCompleted && (
+          <Alert className="border-red-200 bg-red-50">
+            <Clock className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              서명 요청이 만료되었습니다.
+            </AlertDescription>
+          </Alert>
+        )}
 
-            {/* Signature Type */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">서명 방식</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup value={signatureType} onValueChange={setSignatureType}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="draw" id="draw" />
-                    <Label htmlFor="draw">손으로 그리기</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="type" id="type" />
-                    <Label htmlFor="type">텍스트 서명</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="upload" id="upload" />
-                    <Label htmlFor="upload">이미지 업로드</Label>
-                  </div>
-                </RadioGroup>
-              </CardContent>
-            </Card>
-
-            {/* Signature Pad */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">디지털 서명</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SignaturePad
-                  signatureType={signatureType}
-                  onSignatureChange={setSignatureData}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Blockchain Info */}
-            <Card className="bg-purple-50 border-purple-200">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-purple-500 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-medium text-purple-900 mb-2">
-                      블록체인 보안
-                    </h4>
-                    <p className="text-xs text-purple-700 mb-3">
-                      서명 시 Xphere 블록체인에 해시값이 기록됩니다
-                    </p>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-purple-600">문서 해시:</span>
-                        <span className="text-purple-800 font-mono">
-                          {document.fileHash.slice(0, 8)}...
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-purple-600">타임스탬프:</span>
-                        <span className="text-purple-800">
-                          {new Date().toLocaleString('ko-KR')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setIsPreviewMode(!isPreviewMode)}
-                disabled={!signatureData}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                {isPreviewMode ? "미리보기 끄기" : "서명 미리보기"}
-              </Button>
-              
-              <Button 
-                className="w-full"
-                onClick={handleCompleteSignature}
-                disabled={!signatureData || signatureMutation.isPending}
-              >
-                <Signature className="w-4 h-4 mr-2" />
-                {signatureMutation.isPending ? "서명 처리 중..." : "서명 완료"}
-              </Button>
-              
-              <Button variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                PDF 다운로드
-              </Button>
+        {/* Document Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              문서 정보
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">문서 제목</div>
+                <div className="text-lg font-semibold">{document.title}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">파일 크기</div>
+                <div>{(document.fileSize / 1024).toFixed(1)} KB</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">파일 형식</div>
+                <Badge variant="outline">{document.fileType}</Badge>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">상태</div>
+                <Badge variant={document.status === "서명 완료" ? "default" : "secondary"}>
+                  {document.status}
+                </Badge>
+              </div>
             </div>
+            {document.description && (
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">설명</div>
+                <div className="text-sm">{document.description}</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Signature Request Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              서명 요청 상세
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">서명자</div>
+                <div>{signatureRequest.signerName || signatureRequest.signerEmail}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">요청 상태</div>
+                <Badge variant={isCompleted ? "default" : "secondary"}>
+                  {signatureRequest.status}
+                </Badge>
+              </div>
+              {signatureRequest.deadline && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">마감일</div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(signatureRequest.deadline).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">요청일</div>
+                <div>{signatureRequest.createdAt ? new Date(signatureRequest.createdAt).toLocaleDateString() : 'N/A'}</div>
+              </div>
+            </div>
+            {signatureRequest.message && (
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">메시지</div>
+                <div className="text-sm bg-gray-50 p-3 rounded-lg">
+                  {signatureRequest.message}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Blockchain Security Info */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Shield className="h-5 w-5" />
+              <span className="font-medium">블록체인 보안</span>
+            </div>
+            <p className="text-sm text-blue-700 mt-2">
+              이 문서는 블록체인 기술로 보호되어 변조가 불가능하며, 
+              서명 후 모든 활동이 분산 원장에 기록됩니다.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Sign Button */}
+        {!isCompleted && !isExpired && (
+          <div className="text-center">
+            <Button
+              size="lg"
+              onClick={() => setShowSignaturePad(true)}
+              className="px-8 py-3"
+            >
+              <PenTool className="h-5 w-5 mr-2" />
+              지금 서명하기
+            </Button>
           </div>
-        </div>
+        )}
+
+        {/* Signature Pad Dialog */}
+        <Dialog open={showSignaturePad} onOpenChange={setShowSignaturePad}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>문서 서명</DialogTitle>
+            </DialogHeader>
+            <SignaturePad
+              onSignatureComplete={handleSignature}
+              onCancel={() => setShowSignaturePad(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

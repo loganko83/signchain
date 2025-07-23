@@ -1,18 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import Navigation from "@/components/navigation";
 import UploadModal from "@/components/upload-modal";
+import SignatureRequestModal from "@/components/signature-request-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth.tsx";
 import { getBlockchainStatus } from "@/lib/blockchain";
-import { Plus, LayoutTemplate, FileText, CheckCircle, Clock, Shield, TrendingUp } from "lucide-react";
+import { Plus, LayoutTemplate, FileText, CheckCircle, Clock, Shield, TrendingUp, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Document, SignatureRequest } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [signatureRequestModalOpen, setSignatureRequestModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [blockchainStatus, setBlockchainStatus] = useState(getBlockchainStatus());
 
   // Update blockchain status periodically
@@ -48,6 +51,11 @@ export default function Dashboard() {
     completedSignatures: documents.filter(doc => doc.status === "서명 완료").length,
     pendingSignatures: signatureRequests.filter(req => req.status === "대기").length,
     blockchainVerified: "100%",
+  };
+
+  const handleRequestSignature = (document: Document) => {
+    setSelectedDocument(document);
+    setSignatureRequestModalOpen(true);
   };
 
   const getFileIcon = (fileType: string) => {
@@ -198,6 +206,20 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(document.status)}
+                      {document.status !== "서명 완료" && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRequestSignature(document);
+                          }}
+                          className="h-6 text-xs"
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          서명 요청
+                        </Button>
+                      )}
                       <span className="text-xs text-gray-400">
                         {document.createdAt ? new Date(document.createdAt).toLocaleDateString('ko-KR') : ''}
                       </span>
@@ -285,6 +307,14 @@ export default function Dashboard() {
         open={uploadModalOpen} 
         onOpenChange={setUploadModalOpen}
       />
+      
+      {selectedDocument && (
+        <SignatureRequestModal
+          document={selectedDocument}
+          open={signatureRequestModalOpen}
+          onOpenChange={setSignatureRequestModalOpen}
+        />
+      )}
     </div>
   );
 }

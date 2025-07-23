@@ -1,17 +1,23 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { RotateCcw, Eye } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { PenTool, Type, RotateCcw, Check } from "lucide-react";
 
 interface SignaturePadProps {
-  signatureType: string;
-  onSignatureChange: (signature: string) => void;
+  onSignatureComplete: (signatureData: string, signatureType: "canvas" | "text") => void;
+  onCancel: () => void;
 }
 
-export default function SignaturePad({ signatureType, onSignatureChange }: SignaturePadProps) {
+export default function SignaturePad({ onSignatureComplete, onCancel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [textSignature, setTextSignature] = useState("");
+  const [signatureName, setSignatureName] = useState("");
+  const [canvasSignature, setCanvasSignature] = useState("");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -21,56 +27,63 @@ export default function SignaturePad({ signatureType, onSignatureChange }: Signa
     if (!ctx) return;
 
     // Set canvas size
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 128;
+    canvas.width = 400;
+    canvas.height = 200;
 
-    // Set drawing styles
+    // Set drawing style
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+
+    // Fill with white background
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (signatureType !== "draw") return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || signatureType !== "draw") return;
-    
+    if (!isDrawing) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
   const stopDrawing = () => {
     if (!isDrawing) return;
-    
+
     setIsDrawing(false);
-    captureSignature();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Save signature as base64
+    const dataURL = canvas.toDataURL();
+    setCanvasSignature(dataURL);
   };
 
   const clearCanvas = () => {
@@ -80,141 +93,124 @@ export default function SignaturePad({ signatureType, onSignatureChange }: Signa
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onSignatureChange("");
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setCanvasSignature("");
   };
 
-  const captureSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const dataURL = canvas.toDataURL();
-    onSignatureChange(dataURL);
-  };
-
-  const handleTextSignature = (text: string) => {
-    setTextSignature(text);
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (text) {
-      // Draw text signature
-      ctx.font = "32px cursive";
-      ctx.fillStyle = "#000000";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-      
-      const dataURL = canvas.toDataURL();
-      onSignatureChange(dataURL);
-    } else {
-      onSignatureChange("");
+  const handleCanvasSignature = () => {
+    if (!canvasSignature) {
+      alert("서명을 먼저 그려주세요.");
+      return;
     }
+    onSignatureComplete(canvasSignature, "canvas");
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Calculate scaling to fit image in canvas
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        const x = (canvas.width - img.width * scale) / 2;
-        const y = (canvas.height - img.height * scale) / 2;
-        
-        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-        
-        const dataURL = canvas.toDataURL();
-        onSignatureChange(dataURL);
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+  const handleTextSignature = () => {
+    if (!textSignature.trim()) {
+      alert("서명 텍스트를 입력해주세요.");
+      return;
+    }
+    onSignatureComplete(textSignature, "text");
   };
 
   return (
-    <div className="space-y-4">
-      {signatureType === "draw" && (
-        <div>
-          <canvas
-            ref={canvasRef}
-            className="w-full h-32 bg-white border border-gray-200 rounded cursor-crosshair signature-canvas"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-          />
-          <div className="flex justify-between mt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearCanvas}
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              지우기
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={captureSignature}
-            >
-              <Eye className="w-4 h-4 mr-1" />
-              미리보기
-            </Button>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PenTool className="h-5 w-5" />
+          디지털 서명
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="signerName">서명자 이름</Label>
+            <Input
+              id="signerName"
+              value={signatureName}
+              onChange={(e) => setSignatureName(e.target.value)}
+              placeholder="서명자 이름을 입력하세요"
+            />
           </div>
-        </div>
-      )}
 
-      {signatureType === "type" && (
-        <div>
-          <Input
-            placeholder="서명을 입력하세요"
-            value={textSignature}
-            onChange={(e) => handleTextSignature(e.target.value)}
-            className="mb-2"
-          />
-          <canvas
-            ref={canvasRef}
-            className="w-full h-32 bg-white border border-gray-200 rounded"
-          />
-        </div>
-      )}
+          <Tabs defaultValue="canvas" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="canvas" className="flex items-center gap-2">
+                <PenTool className="h-4 w-4" />
+                손글씨 서명
+              </TabsTrigger>
+              <TabsTrigger value="text" className="flex items-center gap-2">
+                <Type className="h-4 w-4" />
+                텍스트 서명
+              </TabsTrigger>
+            </TabsList>
 
-      {signatureType === "upload" && (
-        <div>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="mb-2"
-          />
-          <canvas
-            ref={canvasRef}
-            className="w-full h-32 bg-white border border-gray-200 rounded"
-          />
+            <TabsContent value="canvas" className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <canvas
+                  ref={canvasRef}
+                  className="border border-gray-200 rounded cursor-crosshair bg-white"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearCanvas}
+                    className="flex items-center gap-1"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    다시 그리기
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCanvasSignature} className="flex-1">
+                  <Check className="h-4 w-4 mr-2" />
+                  서명 완료
+                </Button>
+                <Button variant="outline" onClick={onCancel}>
+                  취소
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="text" className="space-y-4">
+              <div>
+                <Label htmlFor="textSignature">서명 텍스트</Label>
+                <Textarea
+                  id="textSignature"
+                  value={textSignature}
+                  onChange={(e) => setTextSignature(e.target.value)}
+                  placeholder="서명으로 사용할 텍스트를 입력하세요 (예: 홍길동)"
+                  className="font-serif text-lg"
+                />
+              </div>
+              {textSignature && (
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <Label>서명 미리보기:</Label>
+                  <div className="text-2xl font-serif italic mt-2 text-center py-4 border-b-2 border-black">
+                    {textSignature}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={handleTextSignature} className="flex-1">
+                  <Check className="h-4 w-4 mr-2" />
+                  서명 완료
+                </Button>
+                <Button variant="outline" onClick={onCancel}>
+                  취소
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

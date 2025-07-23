@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Documents from "@/pages/documents";
 import Verification from "@/pages/verification";
 import Security from "@/pages/security";
+import ApiDocs from "@/pages/api-docs";
 import SignDocument from "@/pages/sign-document";
 import NotFound from "@/pages/not-found";
 
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/documents" component={Documents} />
       <Route path="/verification" component={Verification} />
       <Route path="/security" component={Security} />
+      <Route path="/api-docs" component={ApiDocs} />
       <Route path="/sign/:token" component={SignDocument} />
       <Route component={NotFound} />
     </Switch>

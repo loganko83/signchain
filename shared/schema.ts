@@ -150,6 +150,34 @@ export const organizationMembers = pgTable("organization_members", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
+// API Keys table for external integrations
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  organizationId: integer("organization_id"),
+  name: text("name").notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  lastUsed: timestamp("last_used"),
+  permissions: jsonb("permissions"), // Array of allowed operations
+  isActive: boolean("is_active").default(true).notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Webhooks table for event notifications
+export const webhooks = pgTable("webhooks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  organizationId: integer("organization_id"),
+  url: text("url").notNull(),
+  secret: text("secret").notNull(),
+  events: jsonb("events").notNull(), // Array of event types to subscribe to
+  isActive: boolean("is_active").default(true).notNull(),
+  lastTriggered: timestamp("last_triggered"),
+  failureCount: integer("failure_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   documentId: integer("document_id").notNull(),
@@ -258,6 +286,23 @@ export const insertOrganizationMemberSchema = createInsertSchema(organizationMem
   permissions: true,
 });
 
+export const insertApiKeySchema = createInsertSchema(apiKeys).pick({
+  userId: true,
+  organizationId: true,
+  name: true,
+  keyHash: true,
+  permissions: true,
+  expiresAt: true,
+});
+
+export const insertWebhookSchema = createInsertSchema(webhooks).pick({
+  userId: true,
+  organizationId: true,
+  url: true,
+  secret: true,
+  events: true,
+});
+
 export const loginSchema = z.object({
   username: z.string().min(1, "사용자명을 입력해주세요"),
   password: z.string().min(1, "비밀번호를 입력해주세요"),
@@ -285,5 +330,9 @@ export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
 export type OrganizationMember = typeof organizationMembers.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type LoginData = z.infer<typeof loginSchema>;

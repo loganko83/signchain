@@ -5,6 +5,7 @@ import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureReq
 import { sendSignatureRequestEmail, sendCompletionEmail } from "./email";
 import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-generator";
 import { setupWebSocket, NotificationService } from "./websocket";
+import { registerApiRoutes } from "./api-routes";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -36,6 +37,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup WebSocket with real-time notifications
   const io = setupWebSocket(httpServer);
   (global as any).notificationService = new NotificationService(io);
+  
+  // Register external API routes
+  registerApiRoutes(app);
   // Authentication routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {

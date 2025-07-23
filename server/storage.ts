@@ -96,6 +96,10 @@ export interface IStorage {
   createBlockchainTransaction(transaction: InsertBlockchainTransaction): Promise<BlockchainTransaction>;
   getBlockchainTransactionsByDocument(documentId: number): Promise<BlockchainTransaction[]>;
   updateBlockchainTransactionStatus(transactionHash: string, status: string, blockNumber?: number, gasUsed?: string, gasFee?: string): Promise<void>;
+  
+  // Helper methods for API
+  getAllDocuments(): Promise<Document[]>;
+  getSignaturesByDocument(documentId: number): Promise<Signature[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -416,6 +420,22 @@ export class DatabaseStorage implements IStorage {
       .update(blockchainTransactions)
       .set(updates)
       .where(eq(blockchainTransactions.transactionHash, transactionHash));
+  }
+
+  // Helper methods for API
+  async getAllDocuments(): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .orderBy(desc(documents.createdAt));
+  }
+
+  async getSignaturesByDocument(documentId: number): Promise<Signature[]> {
+    return await db
+      .select()
+      .from(signatures)
+      .where(eq(signatures.documentId, documentId))
+      .orderBy(desc(signatures.signedAt));
   }
 }
 

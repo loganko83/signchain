@@ -6,6 +6,11 @@ import {
   auditLogs,
   workflowTemplates,
   documentCollaborators,
+  notifications,
+  userSecurity,
+  blockchainTransactions,
+  organizations,
+  organizationMembers,
   type User, 
   type InsertUser,
   type Document,
@@ -18,10 +23,20 @@ import {
   type WorkflowTemplate,
   type InsertWorkflowTemplate,
   type DocumentCollaborator,
-  type InsertDocumentCollaborator
+  type InsertDocumentCollaborator,
+  type Notification,
+  type InsertNotification,
+  type UserSecurity,
+  type InsertUserSecurity,
+  type BlockchainTransaction,
+  type InsertBlockchainTransaction,
+  type Organization,
+  type InsertOrganization,
+  type OrganizationMember,
+  type InsertOrganizationMember
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -64,6 +79,23 @@ export interface IStorage {
   getWorkflowStatus(workflowId: string): Promise<{ completed: number; total: number; currentStep?: SignatureRequest }>;
   approveSignatureRequest(requestId: number, approverId: number): Promise<void>;
   rejectSignatureRequest(requestId: number, approverId: number, reason: string): Promise<void>;
+  
+  // Notification methods
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: number): Promise<Notification[]>;
+  getUnreadNotifications(userId: number): Promise<Notification[]>;
+  markNotificationAsRead(notificationId: number, userId: number): Promise<void>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
+  
+  // Security methods
+  getUserSecurity(userId: number): Promise<UserSecurity | undefined>;
+  createUserSecurity(security: InsertUserSecurity): Promise<UserSecurity>;
+  updateUserSecurity(userId: number, updates: Partial<InsertUserSecurity>): Promise<void>;
+  
+  // Blockchain methods
+  createBlockchainTransaction(transaction: InsertBlockchainTransaction): Promise<BlockchainTransaction>;
+  getBlockchainTransactionsByDocument(documentId: number): Promise<BlockchainTransaction[]>;
+  updateBlockchainTransactionStatus(transactionHash: string, status: string, blockNumber?: number, gasUsed?: string, gasFee?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -279,6 +311,111 @@ export class DatabaseStorage implements IStorage {
         rejectionReason: reason
       })
       .where(eq(signatureRequests.id, requestId));
+  }
+
+  // Notification methods
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [result] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return result;
+  }
+
+  async getNotificationsByUser(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async getUnreadNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(notificationId: number, userId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, userId)
+      ));
+  }
+
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  // Security methods
+  async getUserSecurity(userId: number): Promise<UserSecurity | undefined> {
+    const [security] = await db
+      .select()
+      .from(userSecurity)
+      .where(eq(userSecurity.userId, userId));
+    return security || undefined;
+  }
+
+  async createUserSecurity(security: InsertUserSecurity): Promise<UserSecurity> {
+    const [result] = await db
+      .insert(userSecurity)
+      .values(security)
+      .returning();
+    return result;
+  }
+
+  async updateUserSecurity(userId: number, updates: Partial<InsertUserSecurity>): Promise<void> {
+    await db
+      .update(userSecurity)
+      .set(updates)
+      .where(eq(userSecurity.userId, userId));
+  }
+
+  // Blockchain methods
+  async createBlockchainTransaction(transaction: InsertBlockchainTransaction): Promise<BlockchainTransaction> {
+    const [result] = await db
+      .insert(blockchainTransactions)
+      .values(transaction)
+      .returning();
+    return result;
+  }
+
+  async getBlockchainTransactionsByDocument(documentId: number): Promise<BlockchainTransaction[]> {
+    return await db
+      .select()
+      .from(blockchainTransactions)
+      .where(eq(blockchainTransactions.documentId, documentId))
+      .orderBy(desc(blockchainTransactions.createdAt));
+  }
+
+  async updateBlockchainTransactionStatus(
+    transactionHash: string, 
+    status: string, 
+    blockNumber?: number, 
+    gasUsed?: string, 
+    gasFee?: string
+  ): Promise<void> {
+    const updates: any = { status };
+    if (blockNumber) updates.blockNumber = blockNumber;
+    if (gasUsed) updates.gasUsed = gasUsed;
+    if (gasFee) updates.gasFee = gasFee;
+    if (status === 'confirmed') updates.confirmedAt = new Date();
+
+    await db
+      .update(blockchainTransactions)
+      .set(updates)
+      .where(eq(blockchainTransactions.transactionHash, transactionHash));
   }
 }
 

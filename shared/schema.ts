@@ -87,6 +87,69 @@ export const documentCollaborators = pgTable("document_collaborators", {
   addedAt: timestamp("added_at").defaultNow(),
 });
 
+// New table for real-time notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // 'signature_request', 'signature_completed', 'workflow_update', 'security_alert'
+  isRead: boolean("is_read").default(false).notNull(),
+  metadata: jsonb("metadata"), // Additional data for the notification
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Enhanced users table for security features
+export const userSecurity = pgTable("user_security", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
+  twoFactorSecret: text("two_factor_secret"),
+  biometricEnabled: boolean("biometric_enabled").default(false).notNull(),
+  biometricPublicKey: text("biometric_public_key"),
+  loginAttempts: integer("login_attempts").default(0).notNull(),
+  lastLoginAt: timestamp("last_login_at"),
+  lockedUntil: timestamp("locked_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Blockchain transactions table
+export const blockchainTransactions = pgTable("blockchain_transactions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  signatureId: integer("signature_id"),
+  transactionHash: text("transaction_hash").notNull().unique(),
+  blockNumber: integer("block_number"),
+  networkId: integer("network_id").notNull(), // 1=Ethereum, 137=Polygon, etc.
+  gasUsed: text("gas_used"),
+  gasFee: text("gas_fee"),
+  status: text("status").notNull().default("pending"), // 'pending', 'confirmed', 'failed'
+  contractAddress: text("contract_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+  confirmedAt: timestamp("confirmed_at"),
+});
+
+// Organizations table
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  domain: text("domain"),
+  settings: jsonb("settings"), // Organization-wide settings
+  subscriptionTier: text("subscription_tier").default("basic").notNull(),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Organization members table
+export const organizationMembers = pgTable("organization_members", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(), // 'admin', 'manager', 'member'
+  permissions: jsonb("permissions"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   documentId: integer("document_id").notNull(),
@@ -156,6 +219,45 @@ export const insertDocumentCollaboratorSchema = createInsertSchema(documentColla
   addedBy: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  title: true,
+  message: true,
+  type: true,
+  metadata: true,
+});
+
+export const insertUserSecuritySchema = createInsertSchema(userSecurity).pick({
+  userId: true,
+  twoFactorEnabled: true,
+  twoFactorSecret: true,
+  biometricEnabled: true,
+  biometricPublicKey: true,
+});
+
+export const insertBlockchainTransactionSchema = createInsertSchema(blockchainTransactions).pick({
+  documentId: true,
+  signatureId: true,
+  transactionHash: true,
+  networkId: true,
+  contractAddress: true,
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations).pick({
+  name: true,
+  domain: true,
+  settings: true,
+  subscriptionTier: true,
+  createdBy: true,
+});
+
+export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).pick({
+  organizationId: true,
+  userId: true,
+  role: true,
+  permissions: true,
+});
+
 export const loginSchema = z.object({
   username: z.string().min(1, "사용자명을 입력해주세요"),
   password: z.string().min(1, "비밀번호를 입력해주세요"),
@@ -173,5 +275,15 @@ export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
 export type InsertDocumentCollaborator = z.infer<typeof insertDocumentCollaboratorSchema>;
 export type DocumentCollaborator = typeof documentCollaborators.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertUserSecurity = z.infer<typeof insertUserSecuritySchema>;
+export type UserSecurity = typeof userSecurity.$inferSelect;
+export type InsertBlockchainTransaction = z.infer<typeof insertBlockchainTransactionSchema>;
+export type BlockchainTransaction = typeof blockchainTransactions.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type LoginData = z.infer<typeof loginSchema>;

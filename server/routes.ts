@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema, insertSignatureSchema, insertWorkflowTemplateSchema } from "@shared/schema";
 import { sendSignatureRequestEmail, sendCompletionEmail } from "./email";
 import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-generator";
+import { setupWebSocket, NotificationService } from "./websocket";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -30,6 +31,11 @@ function sendEmailNotification(to: string, subject: string, message: string) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const httpServer = createServer(app);
+  
+  // Setup WebSocket with real-time notifications
+  const io = setupWebSocket(httpServer);
+  (global as any).notificationService = new NotificationService(io);
   // Authentication routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
@@ -546,6 +552,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
+  // Notification routes
+  app.get("/api/notifications", async (req: Request, res: Response) => {
+    try {
+      // For now, use userId from session or header - implement proper auth
+      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: "알림을 가져올 수 없습니다" });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", async (req: Request, res: Response) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      await storage.markNotificationAsRead(notificationId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "알림 읽음 처리 실패" });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "모든 알림 읽음 처리 실패" });
+    }
+  });
+
+  // Security routes
+  app.get("/api/security/:userId", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      let security = await storage.getUserSecurity(userId);
+      
+      if (!security) {
+        security = await storage.createUserSecurity({ userId });
+      }
+      
+      res.json({
+        twoFactorEnabled: security.twoFactorEnabled,
+        biometricEnabled: security.biometricEnabled,
+        lastLoginAt: security.lastLoginAt,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "보안 설정을 가져올 수 없습니다" });
+    }
+  });
+
+  // 2FA Setup
+  app.post("/api/security/2fa/setup", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
+      }
+
+      const { TwoFactorAuth } = await import("./security");
+      const { secret, qrCodeUrl } = TwoFactorAuth.generateSecret(user.email);
+      const qrCode = await TwoFactorAuth.generateQRCode(secret, user.email);
+
+      // Store secret temporarily
+      await storage.updateUserSecurity(userId, { twoFactorSecret: secret });
+
+      res.json({ qrCode, secret });
+    } catch (error) {
+      console.error("2FA 설정 오류:", error);
+      res.status(500).json({ message: "2FA 설정 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/security/2fa/enable", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      const { token } = req.body;
+
+      const { TwoFactorAuth } = await import("./security");
+      const result = await TwoFactorAuth.enableTwoFactor(userId, token);
+
+      res.json(result);
+    } catch (error) {
+      console.error("2FA 활성화 오류:", error);
+      res.status(500).json({ message: "2FA 활성화 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/security/2fa/disable", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      await storage.updateUserSecurity(userId, { 
+        twoFactorEnabled: false,
+        twoFactorSecret: null 
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "2FA 비활성화 실패" });
+    }
+  });
+
+  // Biometric Authentication
+  app.post("/api/security/biometric/register-options", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
+      }
+
+      const { BiometricAuth } = await import("./security");
+      const options = await BiometricAuth.generateRegistrationOptions(userId, user.email);
+
+      res.json(options);
+    } catch (error) {
+      console.error("생체 인증 등록 옵션 생성 오류:", error);
+      res.status(500).json({ message: "생체 인증 설정 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/security/biometric/register-verify", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      const credential = req.body;
+
+      const { BiometricAuth } = await import("./security");
+      const result = await BiometricAuth.verifyRegistration(userId, credential);
+
+      res.json(result);
+    } catch (error) {
+      console.error("생체 인증 등록 검증 오류:", error);
+      res.status(500).json({ message: "생체 인증 등록 중 오류가 발생했습니다" });
+    }
+  });
+
+  app.post("/api/security/biometric/disable", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Get from session
+      await storage.updateUserSecurity(userId, { 
+        biometricEnabled: false,
+        biometricPublicKey: null 
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "생체 인증 비활성화 실패" });
+    }
+  });
+
   return httpServer;
 }

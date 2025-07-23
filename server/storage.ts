@@ -14,6 +14,8 @@ import {
   type InsertSignatureRequest,
   type AuditLog
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -47,165 +49,139 @@ export interface IStorage {
   getAuditLogsByDocument(documentId: number): Promise<AuditLog[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private documents: Map<number, Document>;
-  private signatures: Map<number, Signature>;
-  private signatureRequests: Map<number, SignatureRequest>;
-  private auditLogs: Map<number, AuditLog>;
-  private currentUserId: number;
-  private currentDocumentId: number;
-  private currentSignatureId: number;
-  private currentSignatureRequestId: number;
-  private currentAuditLogId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.documents = new Map();
-    this.signatures = new Map();
-    this.signatureRequests = new Map();
-    this.auditLogs = new Map();
-    this.currentUserId = 1;
-    this.currentDocumentId = 1;
-    this.currentSignatureId = 1;
-    this.currentSignatureRequestId = 1;
-    this.currentAuditLogId = 1;
-  }
+export class DatabaseStorage implements IStorage {
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = {
-      ...insertUser,
-      id,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getDocument(id: number): Promise<Document | undefined> {
-    return this.documents.get(id);
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document || undefined;
   }
 
   async getDocumentsByUser(userId: number): Promise<Document[]> {
-    return Array.from(this.documents.values()).filter(doc => doc.uploadedBy === userId);
+    return await db.select().from(documents).where(eq(documents.uploadedBy, userId));
   }
 
   async createDocument(document: InsertDocument & { fileHash: string; ipfsHash: string }): Promise<Document> {
-    const id = this.currentDocumentId++;
-    const doc: Document = {
-      ...document,
-      id,
-      description: document.description || null,
-      blockchainTxHash: null,
-      status: "업로드됨",
-      createdAt: new Date(),
-    };
-    this.documents.set(id, doc);
+    const [doc] = await db
+      .insert(documents)
+      .values({
+        ...document,
+        status: "업로드됨",
+      })
+      .returning();
     return doc;
   }
 
   async updateDocumentStatus(id: number, status: string, blockchainTxHash?: string): Promise<void> {
-    const document = this.documents.get(id);
-    if (document) {
-      this.documents.set(id, { ...document, status, blockchainTxHash: blockchainTxHash || document.blockchainTxHash });
-    }
+    await db
+      .update(documents)
+      .set({ 
+        status, 
+        blockchainTxHash: blockchainTxHash || undefined 
+      })
+      .where(eq(documents.id, id));
   }
 
   async getSignature(id: number): Promise<Signature | undefined> {
-    return this.signatures.get(id);
+    const [signature] = await db.select().from(signatures).where(eq(signatures.id, id));
+    return signature || undefined;
   }
 
   async getSignaturesByDocument(documentId: number): Promise<Signature[]> {
-    return Array.from(this.signatures.values()).filter(sig => sig.documentId === documentId);
+    return await db.select().from(signatures).where(eq(signatures.documentId, documentId));
   }
 
   async createSignature(signature: InsertSignature & { blockchainTxHash?: string }): Promise<Signature> {
-    const id = this.currentSignatureId++;
-    const sig: Signature = {
-      ...signature,
-      id,
-      blockchainTxHash: signature.blockchainTxHash || null,
-      signedAt: new Date(),
-      isCompleted: false,
-    };
-    this.signatures.set(id, sig);
+    const [sig] = await db
+      .insert(signatures)
+      .values({
+        ...signature,
+        isCompleted: false,
+      })
+      .returning();
     return sig;
   }
 
   async updateSignatureCompletion(id: number, isCompleted: boolean): Promise<void> {
-    const signature = this.signatures.get(id);
-    if (signature) {
-      this.signatures.set(id, { ...signature, isCompleted });
-    }
+    await db
+      .update(signatures)
+      .set({ isCompleted })
+      .where(eq(signatures.id, id));
   }
 
   async getSignatureRequest(id: number): Promise<SignatureRequest | undefined> {
-    return this.signatureRequests.get(id);
+    const [request] = await db.select().from(signatureRequests).where(eq(signatureRequests.id, id));
+    return request || undefined;
   }
 
   async getSignatureRequestByToken(token: string): Promise<SignatureRequest | undefined> {
-    return Array.from(this.signatureRequests.values()).find(req => req.shareToken === token);
+    const [request] = await db.select().from(signatureRequests).where(eq(signatureRequests.shareToken, token));
+    return request || undefined;
   }
 
   async getSignatureRequestsByDocument(documentId: number): Promise<SignatureRequest[]> {
-    return Array.from(this.signatureRequests.values()).filter(req => req.documentId === documentId);
+    return await db.select().from(signatureRequests).where(eq(signatureRequests.documentId, documentId));
   }
 
   async getSignatureRequestsByUser(userId: number): Promise<SignatureRequest[]> {
-    return Array.from(this.signatureRequests.values()).filter(req => req.requesterId === userId);
+    return await db.select().from(signatureRequests).where(eq(signatureRequests.requesterId, userId));
   }
 
   async createSignatureRequest(request: InsertSignatureRequest & { shareToken: string }): Promise<SignatureRequest> {
-    const id = this.currentSignatureRequestId++;
-    const req: SignatureRequest = {
-      ...request,
-      id,
-      message: request.message || null,
-      signerName: request.signerName || null,
-      deadline: request.deadline || null,
-      status: "대기",
-      createdAt: new Date(),
-    };
-    this.signatureRequests.set(id, req);
+    const [req] = await db
+      .insert(signatureRequests)
+      .values({
+        ...request,
+        status: "대기",
+      })
+      .returning();
     return req;
   }
 
   async updateSignatureRequestStatus(id: number, status: string): Promise<void> {
-    const request = this.signatureRequests.get(id);
-    if (request) {
-      this.signatureRequests.set(id, { ...request, status });
-    }
+    await db
+      .update(signatureRequests)
+      .set({ status })
+      .where(eq(signatureRequests.id, id));
   }
 
   async createAuditLog(log: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog> {
-    const id = this.currentAuditLogId++;
-    const auditLog: AuditLog = {
-      ...log,
-      id,
-      timestamp: new Date(),
-    };
-    this.auditLogs.set(id, auditLog);
+    const [auditLog] = await db
+      .insert(auditLogs)
+      .values(log)
+      .returning();
     return auditLog;
   }
 
   async getAuditLogsByDocument(documentId: number): Promise<AuditLog[]> {
-    return Array.from(this.auditLogs.values())
-      .filter(log => log.documentId === documentId)
-      .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.documentId, documentId))
+      .orderBy(auditLogs.timestamp);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

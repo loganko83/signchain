@@ -22,7 +22,7 @@ Preferred communication style: Simple, everyday language.
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
 - **API Design**: RESTful API with structured route handling
-- **File Processing**: In-memory storage with mock blockchain integration
+- **Database**: PostgreSQL with Drizzle ORM for persistent data storage
 - **Authentication**: Simple session-based authentication with localStorage
 
 ## Key Components
@@ -90,10 +90,12 @@ Preferred communication style: Simple, everyday language.
 - **Static Serving**: Express serves built frontend assets
 
 ### Database Configuration
-- **ORM**: Drizzle configured for PostgreSQL dialect
+- **Database**: PostgreSQL with connection pooling via Neon
+- **ORM**: Drizzle configured for PostgreSQL dialect with serverless driver
 - **Migrations**: Schema definitions in `shared/schema.ts`
 - **Connection**: Environment-based DATABASE_URL configuration
 - **Development**: Push-based schema updates for rapid iteration
+- **Storage**: DatabaseStorage class with full CRUD operations for all entities
 
 ### Blockchain Integration
 - **Mock Implementation**: Simulated blockchain operations for development
@@ -101,4 +103,12 @@ Preferred communication style: Simple, everyday language.
 - **Transaction Simulation**: Mock transaction hashes and block numbers
 - **IPFS Simulation**: Mock distributed storage references
 
-The application follows a full-stack TypeScript architecture with shared schema validation, making it easy to maintain type safety across the entire codebase. The mock blockchain implementation allows for development and testing without requiring actual blockchain infrastructure.
+The application follows a full-stack TypeScript architecture with shared schema validation, making it easy to maintain type safety across the entire codebase. The application now uses PostgreSQL for persistent data storage while maintaining mock blockchain functionality for development purposes.
+
+## Recent Changes
+
+### January 23, 2025
+- **Database Integration**: Successfully migrated from in-memory storage to PostgreSQL
+- **Drizzle ORM**: Implemented DatabaseStorage class with full database operations
+- **Schema Migration**: Pushed database schema using `npm run db:push`
+- **Data Persistence**: All user data, documents, signatures, and audit logs now persisted in database

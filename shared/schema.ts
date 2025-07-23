@@ -48,6 +48,9 @@ export const signatureRequests = pgTable("signature_requests", {
   signerName: text("signer_name"),
   message: text("message"),
   deadline: timestamp("deadline"),
+  signatureOrder: integer("signature_order").default(1).notNull(),
+  isSequential: boolean("is_sequential").default(false).notNull(),
+  reminderSent: boolean("reminder_sent").default(false).notNull(),
   status: text("status").notNull().default("대기"),
   shareToken: text("share_token").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -98,6 +101,9 @@ export const insertSignatureRequestSchema = createInsertSchema(signatureRequests
   signerName: true,
   message: true,
   deadline: true,
+  signatureOrder: true,
+  isSequential: true,
+  shareToken: true,
 });
 
 export const loginSchema = z.object({

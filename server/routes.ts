@@ -2,6 +2,8 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertDocumentSchema, insertSignatureRequestSchema, insertSignatureSchema } from "@shared/schema";
+import { sendSignatureRequestEmail, sendCompletionEmail } from "./email";
+import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-generator";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -194,14 +196,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shareToken,
       });
 
-      // Send email notification
+      // Send real email notification  
       const document = await storage.getDocument(request.documentId);
-      if (document) {
-        sendEmailNotification(
-          request.signerEmail,
-          "SignChain 서명 요청",
-          `${request.signerName || request.signerEmail}님, ${document.title} 문서의 서명이 요청되었습니다.`
-        );
+      const requester = await storage.getUser(request.requesterId);
+      
+      if (document && requester) {
+        const signatureUrl = `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.replit.app'}/sign/${shareToken}`;
+        
+        const emailSent = await sendSignatureRequestEmail({
+          to: request.signerEmail,
+          signerName: request.signerName || undefined,
+          requesterName: requester.name,
+          documentTitle: document.title,
+          signatureUrl,
+          deadline: request.deadline || undefined,
+          message: request.message || undefined,
+        });
+
+        console.log(`Email ${emailSent ? 'sent successfully' : 'failed'} to ${request.signerEmail}`);
+        
+        // Update document status to signature pending
+        await storage.updateDocumentStatus(request.documentId, "서명 대기", undefined);
       }
 
       // Create audit log
@@ -249,6 +264,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (completedSignatures.length === allRequests.length) {
         await storage.updateDocumentStatus(signature.documentId, "서명 완료", blockchainTxHash);
+        
+        // Send completion emails to all participants
+        const document = await storage.getDocument(signature.documentId);
+        if (document) {
+          // Send to requester
+          const requester = await storage.getUser(document.uploadedBy);
+          if (requester) {
+            await sendCompletionEmail({
+              to: requester.email,
+              documentTitle: document.title,
+              blockchainTxHash,
+            });
+          }
+          
+          // Send to all signers
+          for (const request of allRequests) {
+            await sendCompletionEmail({
+              to: request.signerEmail,
+              documentTitle: document.title,
+              blockchainTxHash,
+            });
+          }
+        }
       }
 
       // Create audit log
@@ -283,6 +321,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get signature request by token error:", error);
       res.status(500).json({ error: "서명 요청을 가져오는 중 오류가 발생했습니다" });
+    }
+  });
+
+  // Download document with signatures as PDF
+  app.get("/api/documents/:id/download", async (req: Request, res: Response) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const format = (req.query.format as string) || 'pdf';
+      const includeSignatures = req.query.signatures === 'true';
+      const includeAuditTrail = req.query.audit === 'true';
+      const includeBlockchainProof = req.query.blockchain === 'true';
+
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ message: "문서를 찾을 수 없습니다" });
+      }
+
+      const signatures = includeSignatures ? await storage.getSignaturesByDocument(documentId) : [];
+
+      const options: DocumentDownloadOptions = {
+        includeSignatures,
+        includeAuditTrail,
+        includeBlockchainProof,
+        format: format as 'pdf' | 'json' | 'xml'
+      };
+
+      const result = await generateDocumentPackage(document, signatures, options);
+
+      res.setHeader('Content-Type', result.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.content);
+
+      // Create audit log for download
+      await storage.createAuditLog({
+        documentId,
+        userId: null,
+        action: "문서 다운로드",
+        description: `${format.toUpperCase()} 형식으로 문서를 다운로드했습니다`,
+        metadata: { format, options },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+
+    } catch (error) {
+      console.error('Document download error:', error);
+      res.status(500).json({ message: "문서 다운로드 중 오류가 발생했습니다" });
     }
   });
 

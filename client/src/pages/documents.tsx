@@ -18,8 +18,11 @@ import {
   Clock, 
   Send,
   Eye,
-  Download
+  Download,
+  FileDown,
+  FileCode2
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Document } from "@shared/schema";
 import { useAuth } from "@/lib/auth.tsx";
 
@@ -70,11 +73,17 @@ export default function Documents() {
     setSelectedDocument(document);
   };
 
-  const handleDownload = (document: Document) => {
-    // Mock download functionality
+  const handleDownload = (document: Document, format: string = 'pdf', options: any = {}) => {
+    const params = new URLSearchParams({
+      format,
+      signatures: options.includeSignatures ? 'true' : 'false',
+      audit: options.includeAuditTrail ? 'true' : 'false',
+      blockchain: options.includeBlockchainProof ? 'true' : 'false',
+    });
+    
     const link = globalThis.document.createElement('a');
-    link.href = `data:application/pdf;base64,${btoa('Mock PDF content for ' + document.title)}`;
-    link.download = document.title + '.pdf';
+    link.href = `/api/documents/${document.id}/download?${params}`;
+    link.download = `${document.title}.${format}`;
     link.click();
   };
 
@@ -194,13 +203,32 @@ export default function Documents() {
                       <Eye className="w-3 h-3 mr-1" />
                       보기
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleDownload(document)}
-                    >
-                      <Download className="w-3 h-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <Download className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownload(document, 'pdf', { includeSignatures: true, includeBlockchainProof: true })}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          PDF (서명 포함)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload(document, 'pdf', { includeSignatures: false })}>
+                          <FileDown className="w-4 h-4 mr-2" />
+                          PDF (원본만)
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDownload(document, 'json', { includeSignatures: true, includeAuditTrail: true, includeBlockchainProof: true })}>
+                          <FileCode2 className="w-4 h-4 mr-2" />
+                          JSON 데이터
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload(document, 'xml', { includeSignatures: true, includeAuditTrail: true, includeBlockchainProof: true })}>
+                          <FileCode2 className="w-4 h-4 mr-2" />
+                          XML 데이터
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     {document.status !== "서명 완료" && (
                       <Button 
                         size="sm" 

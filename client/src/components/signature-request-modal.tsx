@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CalendarIcon, Send, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon, Send, X, Users, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Document, insertSignatureRequestSchema } from "@shared/schema";
@@ -26,6 +28,9 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
   const [signerName, setSignerName] = useState("");
   const [message, setMessage] = useState("");
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
+  const [isSequential, setIsSequential] = useState(false);
+  const [signatureOrder, setSignatureOrder] = useState(1);
+  const [deadlineType, setDeadlineType] = useState<string>("none");
   const { toast } = useToast();
 
   const createRequestMutation = useMutation({
@@ -63,6 +68,9 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
     setSignerName("");
     setMessage("");
     setDeadline(undefined);
+    setIsSequential(false);
+    setSignatureOrder(1);
+    setDeadlineType("none");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +85,14 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
       return;
     }
 
+    // Calculate deadline based on type
+    let finalDeadline = deadline;
+    if (deadlineType !== "none" && deadlineType !== "custom") {
+      const days = deadlineType === "3days" ? 3 : deadlineType === "1week" ? 7 : deadlineType === "2weeks" ? 14 : 30;
+      finalDeadline = new Date();
+      finalDeadline.setDate(finalDeadline.getDate() + days);
+    }
+
     try {
       await createRequestMutation.mutateAsync({
         documentId: document.id,
@@ -84,7 +100,9 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
         signerEmail: signerEmail.trim(),
         signerName: signerName.trim() || undefined,
         message: message.trim() || undefined,
-        deadline,
+        deadline: finalDeadline,
+        isSequential,
+        signatureOrder,
       });
     } catch (error) {
       console.error("Signature request error:", error);
@@ -132,32 +150,90 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
             />
           </div>
 
+          {/* Workflow Options */}
+          <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">순차 서명</Label>
+                <p className="text-xs text-muted-foreground">서명자들이 순서대로 서명하도록 설정</p>
+              </div>
+              <Switch checked={isSequential} onCheckedChange={setIsSequential} />
+            </div>
+            
+            {isSequential && (
+              <div>
+                <Label htmlFor="signatureOrder">서명 순서</Label>
+                <Select value={signatureOrder.toString()} onValueChange={(value) => setSignatureOrder(parseInt(value))}>
+                  <SelectTrigger>
+                    <Users className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1번째 서명자</SelectItem>
+                    <SelectItem value="2">2번째 서명자</SelectItem>
+                    <SelectItem value="3">3번째 서명자</SelectItem>
+                    <SelectItem value="4">4번째 서명자</SelectItem>
+                    <SelectItem value="5">5번째 서명자</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
           {/* Deadline */}
           <div>
-            <Label>서명 마감일 (선택사항)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !deadline && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {deadline ? format(deadline, "PPP") : "마감일 선택"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={deadline}
-                  onSelect={setDeadline}
-                  disabled={(date) => date < new Date()}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label>서명 마감일</Label>
+            <Select value={deadlineType} onValueChange={setDeadlineType}>
+              <SelectTrigger>
+                <Clock className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="마감일 설정" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">마감일 없음</SelectItem>
+                <SelectItem value="3days">3일 후</SelectItem>
+                <SelectItem value="1week">1주일 후</SelectItem>
+                <SelectItem value="2weeks">2주일 후</SelectItem>
+                <SelectItem value="1month">1개월 후</SelectItem>
+                <SelectItem value="custom">직접 설정</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {deadlineType === "custom" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-2",
+                      !deadline && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deadline ? format(deadline, "PPP") : "마감일 선택"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={deadline}
+                    onSelect={setDeadline}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            
+            {deadlineType !== "none" && deadlineType !== "custom" && (
+              <p className="text-sm text-muted-foreground mt-1">
+                마감일: {(() => {
+                  const days = deadlineType === "3days" ? 3 : deadlineType === "1week" ? 7 : deadlineType === "2weeks" ? 14 : 30;
+                  const date = new Date();
+                  date.setDate(date.getDate() + days);
+                  return date.toLocaleDateString('ko-KR');
+                })()}
+              </p>
+            )}
           </div>
 
           {/* Message */}

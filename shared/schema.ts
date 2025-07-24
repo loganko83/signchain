@@ -1,6 +1,9 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Module types enum
+export const moduleTypeEnum = pgEnum("module_type", ["contract", "approval", "did"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -15,6 +18,7 @@ export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
+  moduleType: moduleTypeEnum("module_type").notNull().default("contract"),
   category: text("category").notNull(),
   priority: text("priority").notNull().default("보통"),
   originalFilename: text("original_filename").notNull(),
@@ -25,6 +29,7 @@ export const documents = pgTable("documents", {
   blockchainTxHash: text("blockchain_tx_hash"),
   status: text("status").notNull().default("업로드됨"),
   uploadedBy: integer("uploaded_by").notNull(),
+  organizationId: integer("organization_id"), // For enterprise accounts
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -178,6 +183,90 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Approval workflows table (for approval module)
+export const approvalWorkflows = pgTable("approval_workflows", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  workflowName: text("workflow_name").notNull(),
+  organizationId: integer("organization_id").notNull(),
+  initiatedBy: integer("initiated_by").notNull(),
+  currentStep: integer("current_step").default(1).notNull(),
+  totalSteps: integer("total_steps").notNull(),
+  status: text("status").default("진행중").notNull(), // 진행중, 완료, 거부, 보류
+  blockchainTxHash: text("blockchain_tx_hash"), // Transaction for workflow creation
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata"), // Workflow configuration
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Approval steps table
+export const approvalSteps = pgTable("approval_steps", {
+  id: serial("id").primaryKey(),
+  workflowId: integer("workflow_id").notNull(),
+  stepNumber: integer("step_number").notNull(),
+  assignedTo: integer("assigned_to"), // User ID
+  assignedRole: text("assigned_role"), // Role name for dynamic assignment
+  stepType: text("step_type").notNull(), // 서명, 검토, 승인
+  status: text("status").default("대기").notNull(), // 대기, 완료, 거부, 건너뜀
+  completedBy: integer("completed_by"),
+  completedAt: timestamp("completed_at"),
+  comments: text("comments"),
+  blockchainTxHash: text("blockchain_tx_hash"), // Transaction for each step completion
+  deadline: timestamp("deadline"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// DID Credentials table (for DID module)
+export const didCredentials = pgTable("did_credentials", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  credentialType: text("credential_type").notNull(), // 사업자등록증, 주민증, 여권
+  credentialId: text("credential_id").notNull().unique(), // DID identifier
+  issuer: text("issuer").notNull(), // Issuing authority
+  subject: jsonb("subject").notNull(), // Credential data (encrypted)
+  proof: jsonb("proof").notNull(), // Cryptographic proof
+  expiresAt: timestamp("expires_at"),
+  revokedAt: timestamp("revoked_at"),
+  blockchainTxHash: text("blockchain_tx_hash").notNull(), // Blockchain registration
+  verificationKey: text("verification_key").notNull(),
+  status: text("status").default("활성").notNull(), // 활성, 만료, 폐기
+  metadata: jsonb("metadata"), // Additional credential metadata
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// DID Verification records
+export const didVerifications = pgTable("did_verifications", {
+  id: serial("id").primaryKey(),
+  credentialId: text("credential_id").notNull(),
+  verifierId: integer("verifier_id").notNull(),
+  verificationResult: boolean("verification_result").notNull(),
+  verificationMethod: text("verification_method").notNull(), // 블록체인, QR코드, API
+  blockchainTxHash: text("blockchain_tx_hash"), // Transaction for verification record
+  metadata: jsonb("metadata"), // Verification details
+  verifiedAt: timestamp("verified_at").defaultNow(),
+});
+
+// Enterprise user roles for approval workflows
+export const enterpriseRoles = pgTable("enterprise_roles", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull(),
+  roleName: text("role_name").notNull(),
+  permissions: jsonb("permissions").notNull(), // Array of permissions
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User role assignments
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  roleId: integer("role_id").notNull(),
+  organizationId: integer("organization_id").notNull(),
+  assignedBy: integer("assigned_by").notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   documentId: integer("document_id").notNull(),
@@ -200,12 +289,68 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertDocumentSchema = createInsertSchema(documents).pick({
   title: true,
   description: true,
+  moduleType: true,
   category: true,
   priority: true,
   originalFilename: true,
   fileType: true,
   fileSize: true,
+  fileHash: true,
+  ipfsHash: true,
   uploadedBy: true,
+  organizationId: true,
+});
+
+export const insertApprovalWorkflowSchema = createInsertSchema(approvalWorkflows).pick({
+  documentId: true,
+  workflowName: true,
+  organizationId: true,
+  initiatedBy: true,
+  totalSteps: true,
+  metadata: true,
+});
+
+export const insertApprovalStepSchema = createInsertSchema(approvalSteps).pick({
+  workflowId: true,
+  stepNumber: true,
+  assignedTo: true,
+  assignedRole: true,
+  stepType: true,
+  deadline: true,
+});
+
+export const insertDidCredentialSchema = createInsertSchema(didCredentials).pick({
+  userId: true,
+  credentialType: true,
+  credentialId: true,
+  issuer: true,
+  subject: true,
+  proof: true,
+  expiresAt: true,
+  verificationKey: true,
+  metadata: true,
+});
+
+export const insertDidVerificationSchema = createInsertSchema(didVerifications).pick({
+  credentialId: true,
+  verifierId: true,
+  verificationResult: true,
+  verificationMethod: true,
+  metadata: true,
+});
+
+export const insertEnterpriseRoleSchema = createInsertSchema(enterpriseRoles).pick({
+  organizationId: true,
+  roleName: true,
+  permissions: true,
+  description: true,
+});
+
+export const insertUserRoleSchema = createInsertSchema(userRoles).pick({
+  userId: true,
+  roleId: true,
+  organizationId: true,
+  assignedBy: true,
 });
 
 export const insertSignatureSchema = createInsertSchema(signatures).pick({
@@ -334,5 +479,17 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 export type Webhook = typeof webhooks.$inferSelect;
+export type InsertApprovalWorkflow = z.infer<typeof insertApprovalWorkflowSchema>;
+export type ApprovalWorkflow = typeof approvalWorkflows.$inferSelect;
+export type InsertApprovalStep = z.infer<typeof insertApprovalStepSchema>;
+export type ApprovalStep = typeof approvalSteps.$inferSelect;
+export type InsertDidCredential = z.infer<typeof insertDidCredentialSchema>;
+export type DidCredential = typeof didCredentials.$inferSelect;
+export type InsertDidVerification = z.infer<typeof insertDidVerificationSchema>;
+export type DidVerification = typeof didVerifications.$inferSelect;
+export type InsertEnterpriseRole = z.infer<typeof insertEnterpriseRoleSchema>;
+export type EnterpriseRole = typeof enterpriseRoles.$inferSelect;
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type UserRole = typeof userRoles.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type LoginData = z.infer<typeof loginSchema>;

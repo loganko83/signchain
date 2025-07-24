@@ -437,6 +437,148 @@ export class DatabaseStorage implements IStorage {
       .where(eq(signatures.documentId, documentId))
       .orderBy(desc(signatures.signedAt));
   }
+
+  // Approval workflow methods
+  async createApprovalWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow> {
+    const [result] = await db
+      .insert(approvalWorkflows)
+      .values(workflow)
+      .returning();
+    return result;
+  }
+
+  async getApprovalWorkflow(workflowId: number): Promise<ApprovalWorkflow | undefined> {
+    const [result] = await db
+      .select()
+      .from(approvalWorkflows)
+      .where(eq(approvalWorkflows.id, workflowId));
+    return result;
+  }
+
+  async getApprovalWorkflowByDocument(documentId: number): Promise<ApprovalWorkflow | undefined> {
+    const [result] = await db
+      .select()
+      .from(approvalWorkflows)
+      .where(eq(approvalWorkflows.documentId, documentId));
+    return result;
+  }
+
+  async updateApprovalWorkflow(workflowId: number, updates: Partial<InsertApprovalWorkflow>): Promise<void> {
+    await db
+      .update(approvalWorkflows)
+      .set(updates)
+      .where(eq(approvalWorkflows.id, workflowId));
+  }
+
+  async createApprovalStep(step: InsertApprovalStep): Promise<ApprovalStep> {
+    const [result] = await db
+      .insert(approvalSteps)
+      .values(step)
+      .returning();
+    return result;
+  }
+
+  async getApprovalStep(stepId: number): Promise<ApprovalStep | undefined> {
+    const [result] = await db
+      .select()
+      .from(approvalSteps)
+      .where(eq(approvalSteps.id, stepId));
+    return result;
+  }
+
+  async getApprovalStepsByWorkflow(workflowId: number): Promise<ApprovalStep[]> {
+    return await db
+      .select()
+      .from(approvalSteps)
+      .where(eq(approvalSteps.workflowId, workflowId))
+      .orderBy(approvalSteps.stepNumber);
+  }
+
+  async updateApprovalStep(stepId: number, updates: Partial<InsertApprovalStep>): Promise<void> {
+    await db
+      .update(approvalSteps)
+      .set(updates)
+      .where(eq(approvalSteps.id, stepId));
+  }
+
+  // DID credential methods
+  async createDIDCredential(credential: InsertDidCredential): Promise<DidCredential> {
+    const [result] = await db
+      .insert(didCredentials)
+      .values(credential)
+      .returning();
+    return result;
+  }
+
+  async getDIDCredential(credentialId: string): Promise<DidCredential | undefined> {
+    const [result] = await db
+      .select()
+      .from(didCredentials)
+      .where(eq(didCredentials.credentialId, credentialId));
+    return result;
+  }
+
+  async getDIDCredentialsByUser(userId: number): Promise<DidCredential[]> {
+    return await db
+      .select()
+      .from(didCredentials)
+      .where(eq(didCredentials.userId, userId))
+      .orderBy(desc(didCredentials.createdAt));
+  }
+
+  async updateDIDCredential(credentialId: string, updates: Partial<InsertDidCredential>): Promise<void> {
+    await db
+      .update(didCredentials)
+      .set(updates)
+      .where(eq(didCredentials.credentialId, credentialId));
+  }
+
+  async createDIDVerification(verification: InsertDidVerification): Promise<DidVerification> {
+    const [result] = await db
+      .insert(didVerifications)
+      .values(verification)
+      .returning();
+    return result;
+  }
+
+  async getDIDVerificationsByCredential(credentialId: string): Promise<DidVerification[]> {
+    return await db
+      .select()
+      .from(didVerifications)
+      .where(eq(didVerifications.credentialId, credentialId))
+      .orderBy(desc(didVerifications.verifiedAt));
+  }
+
+  // Enterprise role methods
+  async createEnterpriseRole(role: InsertEnterpriseRole): Promise<EnterpriseRole> {
+    const [result] = await db
+      .insert(enterpriseRoles)
+      .values(role)
+      .returning();
+    return result;
+  }
+
+  async getEnterpriseRolesByOrg(organizationId: number): Promise<EnterpriseRole[]> {
+    return await db
+      .select()
+      .from(enterpriseRoles)
+      .where(eq(enterpriseRoles.organizationId, organizationId));
+  }
+
+  async assignUserRole(assignment: InsertUserRole): Promise<UserRole> {
+    const [result] = await db
+      .insert(userRoles)
+      .values(assignment)
+      .returning();
+    return result;
+  }
+
+  async getUserRoles(userId: number): Promise<UserRole[]> {
+    return await db
+      .select()
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId));
+  }
 }
 
 export const storage = new DatabaseStorage();

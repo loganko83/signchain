@@ -40,6 +40,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register external API routes
   registerApiRoutes(app);
+  
+  // Import and register module-specific routes
+  const moduleRoutes = await import("./module-routes");
+  app.use("/api/modules", moduleRoutes.default);
   // Authentication routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {

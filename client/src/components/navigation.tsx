@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth.tsx";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown, FileText, Home, Menu, Shield, LayoutTemplate, User, Code } from "lucide-react";
+import { Bell, ChevronDown, FileText, Home, Menu, Shield, LayoutTemplate, User, Code, CheckSquare, CreditCard, UserCheck } from "lucide-react";
 import { useState } from "react";
 import NotificationCenter from "./notification-center";
 
@@ -19,11 +19,12 @@ export default function Navigation() {
 
   const navItems = [
     { href: "/dashboard", label: "대시보드", icon: Home },
-    { href: "/documents", label: "문서 관리", icon: FileText },
+    { href: "/contract", label: "계약 모듈", icon: FileText },
+    { href: "/approval", label: "결재 모듈", icon: CheckSquare },
+    { href: "/did", label: "DID 모듈", icon: UserCheck },
     { href: "/verification", label: "블록체인 검증", icon: Shield },
     { href: "/security", label: "보안 설정", icon: Shield },
     { href: "/api-docs", label: "API 문서", icon: Code },
-    { href: "/templates", label: "템플릿", icon: LayoutTemplate },
   ];
 
   if (!isAuthenticated) {

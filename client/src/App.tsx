@@ -9,6 +9,9 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import Documents from "@/pages/documents";
+import Contract from "@/pages/contract";
+import Approval from "@/pages/approval";
+import DID from "@/pages/did";
 import Verification from "@/pages/verification";
 import Security from "@/pages/security";
 import ApiDocs from "@/pages/api-docs";
@@ -23,6 +26,9 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/documents" component={Documents} />
+      <Route path="/contract" component={Contract} />
+      <Route path="/approval" component={Approval} />
+      <Route path="/did" component={DID} />
       <Route path="/verification" component={Verification} />
       <Route path="/security" component={Security} />
       <Route path="/api-docs" component={ApiDocs} />

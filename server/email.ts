@@ -25,7 +25,7 @@ export async function sendSignatureRequestEmail(data: SignatureRequestEmailData)
   try {
     const msg = {
       to: data.to,
-      from: 'noreply@signchain.app', // 실제 검증된 발신자 이메일로 변경 필요
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@signchain.app', // 검증된 발신자 이메일 필요
       subject: `서명 요청: ${data.documentTitle}`,
       html: generateSignatureRequestHtml(data),
     };
@@ -57,7 +57,7 @@ export async function sendReminderEmail(data: ReminderEmailData): Promise<boolea
   try {
     const msg = {
       to: data.to,
-      from: 'noreply@signchain.app',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@signchain.app',
       subject: `서명 요청 리마인더: ${data.documentTitle}`,
       html: generateReminderHtml(data),
     };
@@ -85,7 +85,7 @@ export async function sendCompletionEmail(data: CompletionEmailData): Promise<bo
   try {
     const msg = {
       to: data.to,
-      from: 'noreply@signchain.app',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@signchain.app',
       subject: `서명 완료: ${data.documentTitle}`,
       html: generateCompletionHtml(data),
     };

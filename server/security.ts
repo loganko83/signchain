@@ -96,9 +96,9 @@ export class TwoFactorAuth {
 
 // Biometric Authentication with WebAuthn
 export class BiometricAuth {
-  private static readonly rpName = 'SignChain';
-  private static readonly rpID = 'localhost'; // Should be your domain in production
-  private static readonly origin = 'http://localhost:5000'; // Should be your origin in production
+  private static readonly rpName = process.env.RP_NAME || 'SignChain';
+  private static readonly rpID = process.env.RP_ID || 'localhost';
+  private static readonly origin = process.env.ORIGIN || 'http://localhost:5000';
 
   static async generateRegistrationOptions(userId: number, userEmail: string) {
     const user = await storage.getUser(userId);

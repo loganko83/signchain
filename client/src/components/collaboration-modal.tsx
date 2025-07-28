@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import WorkflowBuilder from "./workflow-builder";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/contexts/auth";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { 
@@ -47,6 +48,7 @@ interface CollaborationModalProps {
 }
 
 export default function CollaborationModal({ document, open, onOpenChange }: CollaborationModalProps) {
+  const { user } = useAuth();
   // Single signature form state
   const [signerEmail, setSignerEmail] = useState("");
   const [signerName, setSignerName] = useState("");
@@ -164,7 +166,7 @@ export default function CollaborationModal({ document, open, onOpenChange }: Col
     try {
       await createRequestMutation.mutateAsync({
         documentId: document.id,
-        requesterId: 1, // This should come from current user context
+        requesterId: user?.id || 0, // This should come from current user context
         signerEmail: signerEmail.trim(),
         signerName: signerName.trim() || undefined,
         message: message.trim() || undefined,
@@ -191,7 +193,7 @@ export default function CollaborationModal({ document, open, onOpenChange }: Col
       await createWorkflowMutation.mutateAsync({
         templateId: parseInt(selectedTemplate),
         documentId: document.id,
-        requesterId: 1, // This should come from current user context
+        requesterId: user?.id || 0, // This should come from current user context
       });
     } catch (error) {
       console.error("Workflow creation error:", error);

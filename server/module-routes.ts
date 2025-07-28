@@ -179,10 +179,8 @@ router.post("/did/issue-credential", async (req, res) => {
       verificationDocuments: req.body.verificationDocuments
     });
 
-    // 보안상 private key는 응답에서 제거
-    const { privateKey, ...safeResult } = result;
-    
-    res.json(safeResult);
+    // 응답 반환 (privateKey는 이미 제거됨)
+    res.json(result);
   } catch (error) {
     console.error("DID credential issuance error:", error);
     res.status(500).json({ error: "DID 자격증명 발급 실패" });

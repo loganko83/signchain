@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Document, insertSignatureRequestSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth";
 
 interface SignatureRequestModalProps {
   document: Document;
@@ -28,6 +29,7 @@ interface SignatureRequestModalProps {
 }
 
 export default function SignatureRequestModal({ document, open, onOpenChange }: SignatureRequestModalProps) {
+  const { user } = useAuth();
   const [signerEmail, setSignerEmail] = useState("");
   const [signerName, setSignerName] = useState("");
   const [message, setMessage] = useState("");
@@ -43,7 +45,7 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
   const { data: workflowTemplates = [] } = useQuery({
     queryKey: ["/api/workflow-templates"],
     queryFn: async () => {
-      const response = await fetch("/api/workflow-templates?userId=1"); // Should use current user
+      const response = await fetch(`/api/workflow-templates?userId=${user?.id || ''}`); // Using current user
       if (!response.ok) throw new Error("템플릿을 가져올 수 없습니다");
       return response.json();
     },
@@ -114,7 +116,7 @@ export default function SignatureRequestModal({ document, open, onOpenChange }: 
     try {
       await createRequestMutation.mutateAsync({
         documentId: document.id,
-        requesterId: 1, // This should come from current user context
+        requesterId: user?.id || 0, // This should come from current user context
         signerEmail: signerEmail.trim(),
         signerName: signerName.trim() || undefined,
         message: message.trim() || undefined,

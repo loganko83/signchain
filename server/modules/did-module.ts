@@ -84,16 +84,28 @@ export class DIDModule {
         })
       });
 
+      // 개인키 암호화 저장 (실제로는 별도의 안전한 키 관리 시스템 사용 권장)
+      const encryptedPrivateKey = this.encryptPrivateKey(keyPair.privateKey, credentialData.userId);
+      
+      // 안전한 저장을 위해 개인키 정보를 별도로 저장
+      await storage.storeDIDPrivateKey({
+        credentialId,
+        userId: credentialData.userId,
+        encryptedPrivateKey,
+        createdAt: new Date()
+      });
+
       return {
         credential: {
           ...credential,
           subject: credentialData.subjectData // 반환 시에는 원본 데이터
         },
         verificationKey: keyPair.publicKey,
-        privateKey: keyPair.privateKey, // 보안상 일회성 반환
+        // privateKey는 보안상 반환하지 않음
         blockchainTransaction: blockchainTx,
         qrCode: await this.generateQRCode(credentialId),
-        success: true
+        success: true,
+        message: "자격증명이 안전하게 발급되었습니다. 개인키는 안전하게 저장되었습니다."
       };
     } catch (error) {
       console.error("DID credential issuance error:", error);
@@ -341,19 +353,30 @@ export class DIDModule {
       "여권": "passport"
     }[credentialType] || "unknown";
     
-    const hash = crypto.createHash('sha256')
-      .update(`${credentialType}:${idNumber}:${Date.now()}`)
-      .digest('hex').slice(0, 16);
+    // UUID v4 사용하여 고유성 보장
+    const uniqueId = crypto.randomUUID();
     
-    return `${prefix}${typeCode}:${hash}`;
+    return `${prefix}${typeCode}:${uniqueId}`;
   }
 
   private encryptCredentialData(data: any): any {
-    // 실제 구현에서는 강력한 암호화 사용
-    const encrypted = crypto.createCipher('aes-256-cbc', process.env.ENCRYPTION_KEY || 'default-key');
-    let result = encrypted.update(JSON.stringify(data), 'utf8', 'hex');
-    result += encrypted.final('hex');
-    return { encrypted: result };
+    const encryptionKey = process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error('ENCRYPTION_KEY is not set in environment variables');
+    }
+    
+    const algorithm = 'aes-256-cbc';
+    const key = crypto.scryptSync(encryptionKey, 'salt', 32);
+    const iv = crypto.randomBytes(16);
+    
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    let encrypted = cipher.update(JSON.stringify(data), 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    return { 
+      encrypted, 
+      iv: iv.toString('hex') 
+    };
   }
 
   private generateProof(data: any, privateKey: string): any {
@@ -380,6 +403,32 @@ export class DIDModule {
     } catch (error) {
       return false;
     }
+  }
+
+  private encryptPrivateKey(privateKey: string, userId: number): string {
+    const encryptionKey = process.env.PRIVATE_KEY_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error('PRIVATE_KEY_ENCRYPTION_KEY is not set in environment variables');
+    }
+    
+    const algorithm = 'aes-256-gcm';
+    const salt = crypto.randomBytes(32);
+    const key = crypto.scryptSync(encryptionKey + userId.toString(), salt, 32);
+    const iv = crypto.randomBytes(16);
+    
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    let encrypted = cipher.update(privateKey, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    const authTag = cipher.getAuthTag();
+    
+    return JSON.stringify({
+      encrypted,
+      salt: salt.toString('hex'),
+      iv: iv.toString('hex'),
+      authTag: authTag.toString('hex')
+    });
+  }
   }
 
   private getVerificationLevel(credentialType: string): string {

@@ -6,11 +6,12 @@ import { sendSignatureRequestEmail, sendCompletionEmail } from "./email";
 import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-generator";
 import { setupWebSocket, NotificationService } from "./websocket";
 import { registerApiRoutes } from "./api-routes";
+import { SecurityHelpers } from "./security";
 import crypto from "crypto";
 import { z } from "zod";
 
-// Mock blockchain and IPFS functions
-function generateHash(data: string): string {
+// Hash functions for document integrity (SHA-256 is appropriate for this use case)
+function generateDocumentHash(data: string): string {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
@@ -64,8 +65,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "이메일이 이미 존재합니다" });
       }
 
-      // Hash password (in production, use bcrypt)
-      const hashedPassword = generateHash(userData.password);
+      // Hash password using bcrypt
+      const hashedPassword = await SecurityHelpers.hashPassword(userData.password);
       
       const user = await storage.createUser({
         ...userData,
@@ -92,8 +93,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "잘못된 사용자명 또는 비밀번호입니다" });
       }
 
-      const hashedPassword = generateHash(loginData.password);
-      if (user.password !== hashedPassword) {
+      const isPasswordValid = await SecurityHelpers.verifyPassword(loginData.password, user.password);
+      if (!isPasswordValid) {
         return res.status(401).json({ message: "잘못된 사용자명 또는 비밀번호입니다" });
       }
 
@@ -144,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simulate file processing
       const fileContent = `Mock file content for ${documentData.originalFilename}`;
-      const fileHash = generateHash(fileContent);
+      const fileHash = generateDocumentHash(fileContent);
       const ipfsHash = generateIPFSHash();
       
       const document = await storage.createDocument({

@@ -28,6 +28,21 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 관련 라이브러리
+          'react-vendor': ['react', 'react-dom', 'wouter'],
+          // UI 라이브러리
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-label', '@radix-ui/react-slot', '@radix-ui/react-tooltip'],
+          // 유틸리티 라이브러리
+          'utils': ['clsx', 'class-variance-authority', 'tailwind-merge'],
+          // API 및 상태 관리
+          'api': ['@tanstack/react-query', 'axios'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
   server: {
     port: 5174,

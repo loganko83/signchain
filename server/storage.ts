@@ -162,10 +162,6 @@ export class DatabaseStorage implements IStorage {
     return signature || undefined;
   }
 
-  async getSignaturesByDocument(documentId: number): Promise<Signature[]> {
-    return await db.select().from(signatures).where(eq(signatures.documentId, documentId));
-  }
-
   async createSignature(signature: InsertSignature & { blockchainTxHash?: string }): Promise<Signature> {
     const [sig] = await db
       .insert(signatures)

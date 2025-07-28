@@ -44,6 +44,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and register module-specific routes
   const moduleRoutes = await import("./module-routes");
   app.use("/api/modules", moduleRoutes.default);
+  
+  // Import and register DID routes
+  const didRoutes = await import("./routes/did");
+  app.use("/api/did", didRoutes.default);
   // Authentication routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {

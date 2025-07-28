@@ -5,30 +5,7 @@ import { FileText, Shield, Users, Zap } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">SignChain</span>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button variant="ghost">로그인</Button>
-              </Link>
-              <Link href="/register">
-                <Button>회원가입</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="bg-gray-50">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary to-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -136,23 +113,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">SignChain</span>
-            </div>
-            <p className="text-gray-600 text-sm">
-              © 2024 SignChain. 모든 권리 보유.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

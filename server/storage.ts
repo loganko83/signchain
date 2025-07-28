@@ -581,4 +581,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Use memory storage for development if DATABASE_URL is not properly configured
+import { MemoryStorage } from './mocks/memory-storage';
+
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isMockDatabase = process.env.DATABASE_URL?.includes('mock-database');
+
+// Now using real Supabase database
+export const storage: IStorage = new DatabaseStorage();

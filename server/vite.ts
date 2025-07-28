@@ -83,14 +83,20 @@ export function serveStatic(app: Express) {
 
   const baseUrl = process.env.BASE_URL || '/';
   
-  // Serve static files with base URL
-  app.use(baseUrl, express.static(distPath));
+  // Remove trailing slash for consistency
+  const normalizedBase = baseUrl.endsWith('/') && baseUrl !== '/' 
+    ? baseUrl.slice(0, -1) 
+    : baseUrl;
   
-  // Serve assets specifically
-  app.use(baseUrl + 'assets', express.static(path.join(distPath, 'assets')));
-
-  // fall through to index.html if the file doesn't exist
-  app.use(baseUrl + "*", (_req, res) => {
+  // Serve static files
+  app.use(express.static(distPath));
+  
+  // Catch all routes and serve index.html
+  app.get("*", (req, res) => {
+    // Skip API routes
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ message: "Not found" });
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

@@ -92,10 +92,10 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
   
   // Catch all routes and serve index.html
-  app.get("*", (req, res) => {
-    // Skip API routes
+  app.get("*", (req, res, next) => {
+    // Skip API routes - let them fall through to 404 handler
     if (req.path.startsWith('/api')) {
-      return res.status(404).json({ message: "Not found" });
+      return next();
     }
     res.sendFile(path.resolve(distPath, "index.html"));
   });

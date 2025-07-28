@@ -429,7 +429,6 @@ export class DIDModule {
       authTag: authTag.toString('hex')
     });
   }
-  }
 
   private getVerificationLevel(credentialType: string): string {
     const levels = {

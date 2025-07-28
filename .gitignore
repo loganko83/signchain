@@ -11,6 +11,7 @@ vite.config.ts.*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.backup
 
 # IDE
 .vscode/

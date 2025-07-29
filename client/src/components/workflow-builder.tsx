@@ -171,7 +171,7 @@ export default function WorkflowBuilder({ documentId, open, onOpenChange, onWork
     await createWorkflowMutation.mutateAsync({
       name: workflowName.trim(),
       description: workflowDescription.trim() || undefined,
-      createdBy: 1, // TODO: Get from auth context - temporary placeholder
+      createdBy: 1, // TODO: SECURITY - Get from auth context - temporary placeholder
       steps: {
         isSequential,
         steps: steps.map(step => ({

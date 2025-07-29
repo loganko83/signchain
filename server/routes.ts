@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification routes
   app.get("/api/notifications", async (req: Request, res: Response) => {
     try {
-      // For now, use userId from session or header - implement proper auth
+      // TODO: SECURITY - use userId from session or header - implement proper auth
       const userId = parseInt(req.headers['user-id'] as string) || 1;
       const notifications = await storage.getNotificationsByUser(userId);
       res.json(notifications);
@@ -580,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/notifications/:id/read", async (req: Request, res: Response) => {
     try {
       const notificationId = parseInt(req.params.id);
-      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      const userId = parseInt(req.headers['user-id'] as string) || 1; // TODO: SECURITY - Get from auth context
       await storage.markNotificationAsRead(notificationId, userId);
       res.json({ success: true });
     } catch (error) {
@@ -590,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/notifications/mark-all-read", async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      const userId = parseInt(req.headers['user-id'] as string) || 1; // TODO: SECURITY - Get from auth context
       await storage.markAllNotificationsAsRead(userId);
       res.json({ success: true });
     } catch (error) {
@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 2FA Setup
   app.post("/api/security/2fa/setup", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/security/2fa/enable", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       const { token } = req.body;
 
       const { TwoFactorAuth } = await import("./security");
@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/security/2fa/disable", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       await storage.updateUserSecurity(userId, { 
         twoFactorEnabled: false,
         twoFactorSecret: null 
@@ -673,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Biometric Authentication
   app.post("/api/security/biometric/register-options", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
@@ -691,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/security/biometric/register-verify", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       const credential = req.body;
 
       const { BiometricAuth } = await import("./security");
@@ -706,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/security/biometric/disable", async (req: Request, res: Response) => {
     try {
-      const userId = 1; // Get from session
+      const userId = 1; // TODO: SECURITY - Get from session/auth context
       await storage.updateUserSecurity(userId, { 
         biometricEnabled: false,
         biometricPublicKey: null 

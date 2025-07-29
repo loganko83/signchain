@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading, isAuthenticated } = useAuth();
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -93,10 +93,12 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           <div className="flex items-center space-x-4">
-            {user ? (
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground">로딩 중...</div>
+            ) : isAuthenticated && user ? (
               <>
                 <span className="text-sm text-muted-foreground">
-                  {user.email}
+                  {user.name || user.email}
                 </span>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                   로그아웃

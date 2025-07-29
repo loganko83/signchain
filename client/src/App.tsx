@@ -4,7 +4,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "./lib/auth.tsx";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/LoginForm";
 import Layout from "@/components/Layout";
 
 // Lazy load pages
@@ -37,13 +38,37 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/documents" component={Documents} />
-          <Route path="/contract" component={Contract} />
-          <Route path="/approval" component={Approval} />
-          <Route path="/did" component={DID} />
+          <Route path="/dashboard">
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/documents">
+            <ProtectedRoute>
+              <Documents />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/contract">
+            <ProtectedRoute>
+              <Contract />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/approval">
+            <ProtectedRoute>
+              <Approval />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/did">
+            <ProtectedRoute>
+              <DID />
+            </ProtectedRoute>
+          </Route>
           <Route path="/verification" component={Verification} />
-          <Route path="/security" component={Security} />
+          <Route path="/security">
+            <ProtectedRoute>
+              <Security />
+            </ProtectedRoute>
+          </Route>
           <Route path="/api-docs" component={ApiDocs} />
           <Route path="/sign/:token" component={SignDocument} />
           <Route component={NotFound} />

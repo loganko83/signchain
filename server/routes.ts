@@ -7,6 +7,8 @@ import { generateDocumentPackage, type DocumentDownloadOptions } from "./pdf-gen
 import { setupWebSocket, NotificationService } from "./websocket";
 import { registerApiRoutes } from "./api-routes";
 import { SecurityHelpers } from "./security";
+import { authenticateToken, optionalAuth, getCurrentUserId, requireCurrentUserId } from "./auth/jwt-auth";
+import { login, logout, refreshToken, getCurrentUser } from "./auth/auth-routes";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -49,7 +51,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and register DID routes
   const didRoutes = await import("./routes/did");
   app.use("/api/did", didRoutes.default);
-  // Authentication routes
+  
+  // Authentication routes with JWT
+  app.post("/api/auth/login", login);
+  app.post("/api/auth/logout", logout);
+  app.post("/api/auth/refresh", refreshToken);
+  app.get("/api/auth/me", authenticateToken, getCurrentUser);
+  
+  // Legacy authentication routes (for backward compatibility)
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const userData = insertUserSchema.parse(req.body);
@@ -565,11 +574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Notification routes
-  app.get("/api/notifications", async (req: Request, res: Response) => {
+  // Notification routes (protected with authentication)
+  app.get("/api/notifications", authenticateToken, async (req: Request, res: Response) => {
     try {
-      // TODO: SECURITY - use userId from session or header - implement proper auth
-      const userId = parseInt(req.headers['user-id'] as string) || 1;
+      const userId = requireCurrentUserId(req);
       const notifications = await storage.getNotificationsByUser(userId);
       res.json(notifications);
     } catch (error) {
@@ -577,10 +585,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notifications/:id/read", async (req: Request, res: Response) => {
+  app.post("/api/notifications/:id/read", authenticateToken, async (req: Request, res: Response) => {
     try {
       const notificationId = parseInt(req.params.id);
-      const userId = parseInt(req.headers['user-id'] as string) || 1; // TODO: SECURITY - Get from auth context
+      const userId = requireCurrentUserId(req);
       await storage.markNotificationAsRead(notificationId, userId);
       res.json({ success: true });
     } catch (error) {
@@ -588,9 +596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notifications/mark-all-read", async (req: Request, res: Response) => {
+  app.post("/api/notifications/mark-all-read", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.headers['user-id'] as string) || 1; // TODO: SECURITY - Get from auth context
+      const userId = requireCurrentUserId(req);
       await storage.markAllNotificationsAsRead(userId);
       res.json({ success: true });
     } catch (error) {
@@ -618,10 +626,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 2FA Setup
-  app.post("/api/security/2fa/setup", async (req: Request, res: Response) => {
+  // 2FA Setup (protected with authentication)
+  app.post("/api/security/2fa/setup", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
@@ -641,9 +649,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/security/2fa/enable", async (req: Request, res: Response) => {
+  app.post("/api/security/2fa/enable", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       const { token } = req.body;
 
       const { TwoFactorAuth } = await import("./security");
@@ -656,9 +664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/security/2fa/disable", async (req: Request, res: Response) => {
+  app.post("/api/security/2fa/disable", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       await storage.updateUserSecurity(userId, { 
         twoFactorEnabled: false,
         twoFactorSecret: null 
@@ -670,10 +678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Biometric Authentication
-  app.post("/api/security/biometric/register-options", async (req: Request, res: Response) => {
+  // Biometric Authentication (protected with authentication)
+  app.post("/api/security/biometric/register-options", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "사용자를 찾을 수 없습니다" });
@@ -689,9 +697,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/security/biometric/register-verify", async (req: Request, res: Response) => {
+  app.post("/api/security/biometric/register-verify", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       const credential = req.body;
 
       const { BiometricAuth } = await import("./security");
@@ -704,9 +712,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/security/biometric/disable", async (req: Request, res: Response) => {
+  app.post("/api/security/biometric/disable", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = 1; // TODO: SECURITY - Get from session/auth context
+      const userId = requireCurrentUserId(req);
       await storage.updateUserSecurity(userId, { 
         biometricEnabled: false,
         biometricPublicKey: null 

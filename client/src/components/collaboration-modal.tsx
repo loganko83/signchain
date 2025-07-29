@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth, authenticatedFetch } from "../contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,10 +69,10 @@ export default function CollaborationModal({ document, open, onOpenChange }: Col
   const { data: workflowTemplates = [] } = useQuery({
     queryKey: ["/api/workflow-templates"],
     queryFn: async () => {
-      // TODO: SECURITY - Get current user ID from auth context instead of hardcoded value
-      // This should be replaced with proper authentication context
-      const currentUserId = 1; // TEMPORARY HARDCODED - REPLACE WITH AUTH CONTEXT
-      const response = await fetch(`/api/workflow-templates?userId=${currentUserId}`);
+      const currentUserId = user?.id;
+      if (!currentUserId) throw new Error("로그인이 필요합니다");
+      
+      const response = await authenticatedFetch(`/api/workflow-templates?userId=${currentUserId}`);
       if (!response.ok) throw new Error("템플릿을 가져올 수 없습니다");
       return response.json();
     },

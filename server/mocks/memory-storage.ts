@@ -99,6 +99,15 @@ export class MemoryStorage implements IStorage {
     return newUser;
   }
 
+  async updateUserLastLogin(userId: number): Promise<void> {
+    const user = usersData.get(userId);
+    if (user) {
+      user.lastLogin = new Date();
+      user.updatedAt = new Date();
+      usersData.set(userId, user);
+    }
+  }
+
   // Document methods
   async getDocument(id: number): Promise<Document | undefined> {
     return documentsData.get(id);

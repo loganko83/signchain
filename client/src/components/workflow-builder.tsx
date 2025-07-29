@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth, authenticatedFetch } from "../contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ interface WorkflowBuilderProps {
 }
 
 export default function WorkflowBuilder({ documentId, open, onOpenChange, onWorkflowCreated }: WorkflowBuilderProps) {
+  const { getCurrentUserId } = useAuth();
   const [workflowName, setWorkflowName] = useState("");
   const [workflowDescription, setWorkflowDescription] = useState("");
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
@@ -61,9 +63,8 @@ export default function WorkflowBuilder({ documentId, open, onOpenChange, onWork
 
   const createWorkflowMutation = useMutation({
     mutationFn: async (workflowData: any) => {
-      const response = await fetch("/api/workflow-templates", {
+      const response = await authenticatedFetch("/api/workflow-templates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(workflowData),
       });
       if (!response.ok) throw new Error("워크플로우 생성에 실패했습니다");
@@ -168,10 +169,20 @@ export default function WorkflowBuilder({ documentId, open, onOpenChange, onWork
       return;
     }
 
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+      toast({
+        title: "인증 오류",
+        description: "로그인이 필요합니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     await createWorkflowMutation.mutateAsync({
       name: workflowName.trim(),
       description: workflowDescription.trim() || undefined,
-      createdBy: 1, // TODO: SECURITY - Get from auth context - temporary placeholder
+      createdBy: currentUserId,
       steps: {
         isSequential,
         steps: steps.map(step => ({

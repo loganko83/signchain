@@ -88,8 +88,8 @@ export function serveStatic(app: Express) {
     ? baseUrl.slice(0, -1) 
     : baseUrl;
   
-  // Serve static files
-  app.use(express.static(distPath));
+  // Serve static files under the base URL
+  app.use(normalizedBase, express.static(distPath));
   
   // Catch all routes and serve index.html
   app.get("*", (req, res, next) => {

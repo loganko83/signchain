@@ -23,7 +23,7 @@ export default function Login() {
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -90,13 +90,14 @@ export default function Login() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>사용자명</FormLabel>
+                      <FormLabel>이메일</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="사용자명을 입력하세요" 
+                          type="email"
+                          placeholder="이메일을 입력하세요" 
                           {...field}
                           disabled={loginMutation.isPending}
                         />

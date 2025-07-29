@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@shared/schema";
-import { AuthContextType } from "./auth";
+
+export interface AuthContextType {
+  user: User | null;
+  login: (user: User) => void;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

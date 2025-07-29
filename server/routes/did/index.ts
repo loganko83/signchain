@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../../db';
+import { SecurityHelpers } from '../../security';
 
 const router = Router();
 
@@ -93,6 +94,25 @@ router.post('/create', async (req, res) => {
       }];
     }
 
+    // 개인 키 암호화
+    const encryptionKey = process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error('ENCRYPTION_KEY is not set');
+    }
+    
+    const algorithm = 'aes-256-cbc';
+    const key = crypto.scryptSync(encryptionKey, 'salt', 32);
+    const iv = crypto.randomBytes(16);
+    
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    let encryptedPrivateKey = cipher.update(keyPair.privateKey, 'utf8', 'hex');
+    encryptedPrivateKey += cipher.final('hex');
+    
+    const encryptedData = {
+      encrypted: encryptedPrivateKey,
+      iv: iv.toString('hex')
+    };
+
     // 데이터베이스에 저장
     await db.query(
       `INSERT INTO dids (did, method, document, public_key, private_key_encrypted, purpose, user_id, created_at)
@@ -102,7 +122,7 @@ router.post('/create', async (req, res) => {
         method,
         JSON.stringify(didDocument),
         keyPair.publicKey,
-        keyPair.privateKey, // 실제로는 암호화해서 저장
+        JSON.stringify(encryptedData), // 암호화된 개인 키 저장
         purpose,
         userId
       ]

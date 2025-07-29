@@ -68,7 +68,9 @@ export default function CollaborationModal({ document, open, onOpenChange }: Col
   const { data: workflowTemplates = [] } = useQuery({
     queryKey: ["/api/workflow-templates"],
     queryFn: async () => {
-      const response = await fetch("/api/workflow-templates?userId=1"); // Should use current user
+      // TODO: Get current user ID from auth context
+      const currentUserId = 1; // Temporary placeholder - should be from auth context
+      const response = await fetch(`/api/workflow-templates?userId=${currentUserId}`);
       if (!response.ok) throw new Error("템플릿을 가져올 수 없습니다");
       return response.json();
     },

@@ -576,5 +576,9 @@ export default function ApprovalModule() {
         </Card>
       </div>
     </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 }

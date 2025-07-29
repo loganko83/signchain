@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -31,50 +31,55 @@ const PageLoading = () => (
 );
 
 function Router() {
+  // Base path 설정 - 프로덕션에서는 /signchain/, 개발에서는 /
+  const basePath = import.meta.env.PROD ? '/signchain' : '';
+  
   return (
-    <Layout>
-      <Suspense fallback={<PageLoading />}>
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Register} />
-          <Route path="/dashboard">
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/documents">
-            <ProtectedRoute>
-              <Documents />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/contract">
-            <ProtectedRoute>
-              <Contract />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/approval">
-            <ProtectedRoute>
-              <Approval />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/did">
-            <ProtectedRoute>
-              <DID />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/verification" component={Verification} />
-          <Route path="/security">
-            <ProtectedRoute>
-              <Security />
-            </ProtectedRoute>
-          </Route>
-          <Route path="/api-docs" component={ApiDocs} />
-          <Route path="/sign/:token" component={SignDocument} />
-          <Route component={NotFound} />
-        </Switch>
-      </Suspense>
-    </Layout>
+    <WouterRouter base={basePath}>
+      <Layout>
+        <Suspense fallback={<PageLoading />}>
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/login" component={Login} />
+            <Route path="/register" component={Register} />
+            <Route path="/dashboard">
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/documents">
+              <ProtectedRoute>
+                <Documents />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/contract">
+              <ProtectedRoute>
+                <Contract />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/approval">
+              <ProtectedRoute>
+                <Approval />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/did">
+              <ProtectedRoute>
+                <DID />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/verification" component={Verification} />
+            <Route path="/security">
+              <ProtectedRoute>
+                <Security />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/api-docs" component={ApiDocs} />
+            <Route path="/sign/:token" component={SignDocument} />
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
+      </Layout>
+    </WouterRouter>
   );
 }
 

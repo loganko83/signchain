@@ -11,7 +11,7 @@ export function apiUrl(path: string): string {
     return `/${cleanPath}`;
   }
   
-  // Otherwise, prepend the BASE_URL
+  // Otherwise, prepend the BASE_URL (for production /signchain)
   const base = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
   return `${base}/${cleanPath}`;
 }

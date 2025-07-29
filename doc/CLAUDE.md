@@ -8,7 +8,7 @@
 ## 진행 상황 기록
 - 날짜별 진행상황은 `progress_{날짜}.md` 파일에 기록
 - 각 작업 완료 시 git commit 수행
-- 최신 진행 파일: progress_2025-07-29.md
+- 최신 진행 파일: progress_2025-07-29.md (보안 문제 해결 완료)
 
 ## 개발 환경
 - 프론트엔드: http://localhost:5174/ (Vite)

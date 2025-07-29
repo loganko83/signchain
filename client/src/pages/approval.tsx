@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckSquare, Users, Mail, ArrowRight, Clock, CheckCircle } from "lucide-react";
+import { CheckSquare, Users, Mail, ArrowRight, Clock, CheckCircle, Settings, BarChart3, FileText } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { ERPApprovalDashboard } from "@/components/approval/ERPApprovalDashboard";
+import { AdvancedApprovalSettings } from "@/components/approval/AdvancedApprovalSettings";
 
 export default function ApprovalModule() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [documentData, setDocumentData] = useState({
@@ -102,6 +106,223 @@ export default function ApprovalModule() {
   };
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">ERP 결재 모듈</h1>
+          <p className="text-gray-600 mt-2">
+            Tryton/Odoo/Dolibarr 스타일의 고급 결재 및 승인 관리 시스템
+          </p>
+        </div>
+
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="dashboard" className="flex items-center space-x-2">
+              <BarChart3 className="w-4 h-4" />
+              <span>대시보드</span>
+            </TabsTrigger>
+            <TabsTrigger value="create" className="flex items-center space-x-2">
+              <FileText className="w-4 h-4" />
+              <span>결재 요청</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center space-x-2">
+              <Settings className="w-4 h-4" />
+              <span>고급 설정</span>
+            </TabsTrigger>
+            <TabsTrigger value="legacy" className="flex items-center space-x-2">
+              <CheckSquare className="w-4 h-4" />
+              <span>기본 승인</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ERP 대시보드 */}
+          <TabsContent value="dashboard">
+            <ERPApprovalDashboard />
+          </TabsContent>
+
+          {/* 결재 요청 생성 */}
+          <TabsContent value="create">
+            <Card>
+              <CardHeader>
+                <CardTitle>새 결재 요청</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* 기본 정보 */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="title">제목</Label>
+                      <Input
+                        id="title"
+                        placeholder="결재 요청 제목"
+                        value={documentData.title}
+                        onChange={(e) => setDocumentData({
+                          ...documentData,
+                          title: e.target.value
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="organization">조직</Label>
+                      <Select
+                        value={documentData.organizationId}
+                        onValueChange={(value) => setDocumentData({
+                          ...documentData,
+                          organizationId: value
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="조직 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">본사</SelectItem>
+                          <SelectItem value="2">지사 A</SelectItem>
+                          <SelectItem value="3">지사 B</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">설명</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="결재 요청에 대한 자세한 설명을 입력하세요"
+                      value={documentData.description}
+                      onChange={(e) => setDocumentData({
+                        ...documentData,
+                        description: e.target.value
+                      })}
+                    />
+                  </div>
+
+                  {/* 파일 업로드 */}
+                  <div>
+                    <Label htmlFor="file">첨부 파일</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={handleFileSelect}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    />
+                    {selectedFile && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        선택된 파일: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 승인 단계 설정 */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <Label>승인 단계</Label>
+                      <Button onClick={addWorkflowStep} size="sm">
+                        단계 추가
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {workflowSteps.map((step, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium">단계 {index + 1}</h4>
+                            {workflowSteps.length > 1 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeWorkflowStep(index)}
+                              >
+                                삭제
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label>단계 유형</Label>
+                              <Select
+                                value={step.stepType}
+                                onValueChange={(value) => updateWorkflowStep(index, "stepType", value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="검토">검토</SelectItem>
+                                  <SelectItem value="승인">승인</SelectItem>
+                                  <SelectItem value="확인">확인</SelectItem>
+                                  <SelectItem value="최종승인">최종승인</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label>담당자 역할</Label>
+                              <Select
+                                value={step.assignedRole}
+                                onValueChange={(value) => updateWorkflowStep(index, "assignedRole", value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="역할 선택" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="팀장">팀장</SelectItem>
+                                  <SelectItem value="부장">부장</SelectItem>
+                                  <SelectItem value="이사">이사</SelectItem>
+                                  <SelectItem value="대표">대표</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label>마감일</Label>
+                              <Input
+                                type="date"
+                                value={step.deadline}
+                                onChange={(e) => updateWorkflowStep(index, "deadline", e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 제출 버튼 */}
+                  <div className="flex justify-end space-x-4">
+                    <Button variant="outline">임시저장</Button>
+                    <Button 
+                      onClick={handleUploadAndCreateWorkflow}
+                      disabled={!selectedFile || uploading}
+                      className="flex items-center space-x-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <Clock className="w-4 h-4 animate-spin" />
+                          <span>처리 중...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="w-4 h-4" />
+                          <span>승인 요청 제출</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 고급 설정 */}
+          <TabsContent value="settings">
+            <AdvancedApprovalSettings />
+          </TabsContent>
+
+          {/* 기존 기본 승인 시스템 (호환성) */}
+          <TabsContent value="legacy">
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}

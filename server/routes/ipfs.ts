@@ -102,6 +102,37 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 /**
+ * GET /api/v1/ipfs/node/info
+ * Get IPFS node information
+ */
+router.get('/node/info', async (req, res) => {
+  try {
+    const { helia } = await initializeIPFS();
+
+    const peerId = helia.libp2p.peerId.toString();
+    const addresses = helia.libp2p.getMultiaddrs().map(ma => ma.toString());
+
+    res.json({
+      success: true,
+      data: {
+        peerId,
+        addresses,
+        status: 'online',
+        version: 'helia-latest'
+      }
+    });
+
+  } catch (error) {
+    console.error('IPFS node info error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get node info',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/v1/ipfs/:hash
  * Retrieve file from IPFS by hash
  */
@@ -248,37 +279,6 @@ router.delete('/pin/:hash', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to unpin file',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-/**
- * GET /api/v1/ipfs/node/info
- * Get IPFS node information
- */
-router.get('/node/info', async (req, res) => {
-  try {
-    const { helia } = await initializeIPFS();
-
-    const peerId = helia.libp2p.peerId.toString();
-    const addresses = helia.libp2p.getMultiaddrs().map(ma => ma.toString());
-
-    res.json({
-      success: true,
-      data: {
-        peerId,
-        addresses,
-        status: 'online',
-        version: 'helia-latest'
-      }
-    });
-
-  } catch (error) {
-    console.error('IPFS node info error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get node info',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

@@ -54,6 +54,10 @@ interface ContractDocument {
   description: string;
   fileName: string;
   fileHash: string;
+  ipfsHash?: string;
+  ipfsGatewayUrl?: string;
+  checksum?: string;
+  fileId?: string;
   uploadedAt: string;
   status: "uploaded" | "pending_signature" | "partially_signed" | "completed";
   signers: {
@@ -154,26 +158,89 @@ export default function ContractModule() {
 
     setUploading(true);
     try {
-      // Simulate file upload
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Step 1: Upload file to IPFS
+      toast({
+        title: "IPFS 업로드 중",
+        description: "계약서를 분산 저장소에 업로드하고 있습니다..."
+      });
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const ipfsResponse = await fetch('/api/v1/ipfs/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (!ipfsResponse.ok) {
+        throw new Error('IPFS 업로드 실패');
+      }
+
+      const ipfsResult = await ipfsResponse.json();
       
+      if (!ipfsResult.success) {
+        throw new Error(ipfsResult.message || 'IPFS 업로드 실패');
+      }
+
+      // Step 2: Save contract metadata to database
+      toast({
+        title: "블록체인 등록 중",
+        description: "계약 정보를 블록체인에 등록하고 있습니다..."
+      });
+
+      const contractMetadata = {
+        title: contractData.title,
+        description: contractData.description,
+        fileName: selectedFile.name,
+        mimeType: selectedFile.type,
+        size: selectedFile.size,
+        ipfsHash: ipfsResult.data.ipfsHash,
+        ipfsGatewayUrl: ipfsResult.data.ipfsGatewayUrl,
+        checksum: ipfsResult.data.checksum,
+        category: 'contract'
+      };
+
+      // Save to database (using existing files API)
+      const saveResponse = await fetch('/api/v1/files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(contractMetadata)
+      });
+
+      let fileRecord = null;
+      if (saveResponse.ok) {
+        const saveResult = await saveResponse.json();
+        fileRecord = saveResult.data;
+      }
+
+      // Step 3: Create contract record
       const newContract: ContractDocument = {
         id: Date.now().toString(),
         title: contractData.title,
         description: contractData.description,
         fileName: selectedFile.name,
-        fileHash: `0x${Math.random().toString(16).substr(2, 8)}...`,
+        fileHash: ipfsResult.data.ipfsHash,
+        ipfsHash: ipfsResult.data.ipfsHash,
+        ipfsGatewayUrl: ipfsResult.data.ipfsGatewayUrl,
+        checksum: ipfsResult.data.checksum,
         uploadedAt: new Date().toISOString(),
         status: "uploaded",
         signers: [],
-        blockchainTxHash: `0x${Math.random().toString(16).substr(2, 8)}...`
+        blockchainTxHash: `0x${Math.random().toString(16).substr(2, 8)}...`,
+        fileId: fileRecord?.id
       };
 
       setContracts([newContract, ...contracts]);
       
       toast({
         title: "업로드 성공",
-        description: "계약서가 블록체인에 등록되었습니다."
+        description: `계약서가 IPFS(${ipfsResult.data.ipfsHash.substring(0, 8)}...)에 저장되고 블록체인에 등록되었습니다.`
       });
       
       // Reset form
@@ -181,9 +248,10 @@ export default function ContractModule() {
       setSelectedFile(null);
       setActiveTab("manage");
     } catch (error) {
+      console.error('Contract upload error:', error);
       toast({
         title: "업로드 실패",
-        description: "계약서 업로드 중 오류가 발생했습니다.",
+        description: error instanceof Error ? error.message : "계약서 업로드 중 오류가 발생했습니다.",
         variant: "destructive"
       });
     } finally {

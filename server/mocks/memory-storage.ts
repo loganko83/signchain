@@ -19,6 +19,7 @@ import {
 } from "@shared/schema";
 import { IStorage } from "../storage";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 
 // In-memory data storage
 const usersData: Map<number, User> = new Map();
@@ -45,8 +46,8 @@ function generateHash(data: string): string {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-// Create test users
-const testPassword = generateHash("password123");
+// Create test users with bcrypt hashed passwords
+const testPassword = bcrypt.hashSync("password123", 12);
 const testUsers = [
   {
     id: 1,

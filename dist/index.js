@@ -498,22 +498,60 @@ var init_schema = __esm({
 });
 
 // server/db.ts
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import ws from "ws";
-var pool, db;
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+function createMockDB() {
+  const mockQuery = {
+    documents: {
+      findFirst: async () => null,
+      findMany: async () => []
+    },
+    signatures: {
+      findFirst: async () => null,
+      findMany: async () => []
+    },
+    users: {
+      findFirst: async () => null,
+      findMany: async () => []
+    }
+  };
+  return {
+    insert: () => ({
+      values: () => ({
+        returning: async () => [{ id: "mock-id", createdAt: /* @__PURE__ */ new Date() }]
+      })
+    }),
+    delete: () => ({
+      where: () => ({ execute: async () => {
+      } })
+    }),
+    query: mockQuery,
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: () => ({
+            offset: () => []
+          })
+        })
+      })
+    })
+    // Add other necessary mock methods as needed
+  };
+}
+var databaseUrl, pool, db;
 var init_db = __esm({
   "server/db.ts"() {
     "use strict";
     init_schema();
-    neonConfig.webSocketConstructor = ws;
-    if (!process.env.DATABASE_URL) {
-      throw new Error(
-        "DATABASE_URL must be set. Did you forget to provision a database?"
-      );
+    databaseUrl = process.env.DATABASE_URL;
+    pool = null;
+    if (databaseUrl) {
+      pool = postgres(databaseUrl);
+      console.log("\u2705 Database connection established");
+    } else {
+      console.warn("\u26A0\uFE0F DATABASE_URL not found, using mock database");
     }
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    db = drizzle({ client: pool, schema: schema_exports });
+    db = pool ? drizzle(pool, { schema: schema_exports }) : createMockDB();
   }
 });
 
@@ -2826,8 +2864,8 @@ var init_schema2 = __esm({
 
 // db/index.ts
 import { drizzle as drizzle2 } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-function createMockDB() {
+import postgres2 from "postgres";
+function createMockDB2() {
   const mockQuery = {
     files: {
       findFirst: async () => null,
@@ -2857,18 +2895,18 @@ function createMockDB() {
     // Add other necessary mock methods as needed
   };
 }
-var databaseUrl, sql, db2;
+var databaseUrl2, sql, db2;
 var init_db2 = __esm({
   "db/index.ts"() {
     "use strict";
     init_schema2();
     init_schema2();
-    databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
+    databaseUrl2 = process.env.DATABASE_URL;
+    if (!databaseUrl2) {
       console.warn("DATABASE_URL not found, using mock database connection");
     }
-    sql = databaseUrl ? postgres(databaseUrl) : null;
-    db2 = sql ? drizzle2(sql, { schema: schema_exports2 }) : createMockDB();
+    sql = databaseUrl2 ? postgres2(databaseUrl2) : null;
+    db2 = sql ? drizzle2(sql, { schema: schema_exports2 }) : createMockDB2();
   }
 });
 

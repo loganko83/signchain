@@ -2825,8 +2825,8 @@ var init_schema2 = __esm({
 });
 
 // db/index.ts
-import { drizzle as drizzle2 } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzle2 } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 function createMockDB() {
   const mockQuery = {
     files: {
@@ -2867,7 +2867,7 @@ var init_db2 = __esm({
     if (!databaseUrl) {
       console.warn("DATABASE_URL not found, using mock database connection");
     }
-    sql = databaseUrl ? neon(databaseUrl) : null;
+    sql = databaseUrl ? postgres(databaseUrl) : null;
     db2 = sql ? drizzle2(sql, { schema: schema_exports2 }) : createMockDB();
   }
 });

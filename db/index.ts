@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './schema.js';
 
 // Database URL from environment variables
@@ -10,7 +10,7 @@ if (!databaseUrl) {
 }
 
 // Create database connection
-const sql = databaseUrl ? neon(databaseUrl) : null;
+const sql = databaseUrl ? postgres(databaseUrl) : null;
 export const db = sql ? drizzle(sql, { schema }) : createMockDB();
 
 // Mock database for development without real database

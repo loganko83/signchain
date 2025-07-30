@@ -10,12 +10,17 @@ import {
   File as FileIcon,
   Calendar,
   User,
-  Hash
+  Hash,
+  Upload,
+  Plus,
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select,
   SelectContent,
@@ -33,6 +38,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import FileUpload from '@/components/FileUpload';
+import IPFSUploader from '@/components/IPFSUploader';
 
 interface FileItem {
   id: string;
@@ -196,166 +202,250 @@ const FilesPage: React.FC = () => {
     }
   };
 
+  const handleFileUploaded = () => {
+    // Refresh file list after upload
+    fetchFiles(1, searchTerm, categoryFilter);
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">File Management</h1>
-        <Badge variant="outline" className="text-sm">
-          IPFS Distributed Storage
-        </Badge>
+        <h1 className="text-3xl font-bold">파일 관리</h1>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-sm">
+            IPFS 분산 저장소
+          </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fetchFiles(1, searchTerm, categoryFilter)}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+        </div>
       </div>
 
-      {/* File Upload Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload New Files</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FileUpload 
-            onUpload={() => fetchFiles(1, searchTerm, categoryFilter)}
-            category={categoryFilter !== 'all' ? categoryFilter as any : 'general'}
-          />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="list" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <FileIcon className="w-4 h-4" />
+            파일 목록
+          </TabsTrigger>
+          <TabsTrigger value="upload" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            파일 업로드
+          </TabsTrigger>
+          <TabsTrigger value="ipfs" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            IPFS 업로드
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        {/* 파일 목록 탭 */}
+        <TabsContent value="list" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex space-x-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="파일 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="카테고리" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체 카테고리</SelectItem>
+                    <SelectItem value="general">일반</SelectItem>
+                    <SelectItem value="contract">계약서</SelectItem>
+                    <SelectItem value="approval">결재</SelectItem>
+                    <SelectItem value="identity">신원증명</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="contract">Contracts</SelectItem>
-                <SelectItem value="approval">Approvals</SelectItem>
-                <SelectItem value="identity">Identity</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Files Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Files ({files.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && files.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-500">Loading files...</p>
-            </div>
-          ) : files.length === 0 ? (
-            <div className="text-center py-8">
-              <FileIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No files found</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>File</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>IPFS Hash</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {files.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          {getFileIcon(file.mimeType)}
-                          <div>
-                            <p className="font-medium">{file.originalName}</p>
-                            <p className="text-sm text-gray-500">{file.mimeType}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getCategoryColor(file.category)}>
-                          {file.category}
-                        </Badge>
-                        {file.isPublic && (
-                          <Badge variant="outline" className="ml-2">
-                            Public
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatFileSize(file.size)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Hash className="h-4 w-4 text-gray-400" />
-                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            {file.ipfsHash.substring(0, 8)}...
-                          </code>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{formatDate(file.createdAt)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(file)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(file)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {/* Files Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>파일 목록 ({files.length})</span>
+                <Badge variant="secondary" className="text-xs">
+                  총 {files.length}개 파일
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading && files.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-500">파일을 불러오는 중...</p>
+                </div>
+              ) : files.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">파일이 없습니다</p>
+                  <p className="text-sm text-gray-400 mt-2">파일 업로드 탭에서 파일을 업로드해보세요</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>파일</TableHead>
+                        <TableHead>카테고리</TableHead>
+                        <TableHead>크기</TableHead>
+                        <TableHead>IPFS 해시</TableHead>
+                        <TableHead>업로드 일시</TableHead>
+                        <TableHead>작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {files.map((file) => (
+                        <TableRow key={file.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              {getFileIcon(file.mimeType)}
+                              <div>
+                                <p className="font-medium">{file.originalName}</p>
+                                <p className="text-sm text-gray-500">{file.mimeType}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getCategoryColor(file.category)}>
+                              {file.category}
+                            </Badge>
+                            {file.isPublic && (
+                              <Badge variant="outline" className="ml-2">
+                                공개
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{formatFileSize(file.size)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Hash className="h-4 w-4 text-gray-400" />
+                              <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                {file.ipfsHash.substring(0, 8)}...
+                              </code>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm">{formatDate(file.createdAt)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownload(file)}
+                                title="파일 다운로드"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(file)}
+                                className="text-red-600 hover:text-red-800"
+                                title="파일 삭제"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
 
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="text-center pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={loadMore}
-                    disabled={loading}
-                  >
-                    {loading ? 'Loading...' : 'Load More'}
-                  </Button>
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <div className="text-center pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={loadMore}
+                        disabled={loading}
+                      >
+                        {loading ? '로딩 중...' : '더 보기'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 파일 업로드 탭 */}
+        <TabsContent value="upload" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                일반 파일 업로드
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FileUpload onFileUploaded={handleFileUploaded} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* IPFS 업로드 탭 */}
+        <TabsContent value="ipfs" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                IPFS 분산 저장소 업로드
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 p-2 rounded-full">
+                      <Globe className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-900">IPFS란?</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        IPFS(InterPlanetary File System)는 분산형 파일 시스템으로, 
+                        파일을 전 세계에 분산 저장하여 안전하고 영구적인 파일 보관을 제공합니다.
+                      </p>
+                      <ul className="text-sm text-blue-600 mt-2 space-y-1">
+                        <li>• 탈중앙화된 파일 저장</li>
+                        <li>• 콘텐츠 기반 주소 지정</li>
+                        <li>• 버전 관리 및 중복 제거</li>
+                        <li>• 검열 저항성</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
+                <IPFSUploader onFileUploaded={handleFileUploaded} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

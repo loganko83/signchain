@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { db, files, insertFileSchema } from '../db/index.js';
+import { db, files, insertFileSchema } from '../../db/index.js';
 import { ipfsService } from '../services/ipfsService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { eq, and, or, like, desc } from 'drizzle-orm';

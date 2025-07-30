@@ -56,6 +56,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const filesRoutes = await import("./routes/files");
   app.use("/api/v1/files", filesRoutes.default);
   
+  // Import and register IPFS routes
+  const ipfsRoutes = await import("./routes/ipfs");
+  app.use("/api/v1/ipfs", ipfsRoutes.default);
+  
   // Authentication routes with JWT
   app.post("/api/auth/login", login);
   app.post("/api/auth/logout", logout);

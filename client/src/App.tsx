@@ -14,6 +14,7 @@ const Login = lazy(() => import("@/pages/login"));
 const Register = lazy(() => import("@/pages/register"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Documents = lazy(() => import("@/pages/documents"));
+const Files = lazy(() => import("@/pages/files"));
 const Contract = lazy(() => import("@/pages/contract"));
 const Approval = lazy(() => import("@/pages/approval"));
 const DID = lazy(() => import("@/pages/did"));
@@ -50,6 +51,11 @@ function Router() {
             <Route path="/documents">
               <ProtectedRoute>
                 <Documents />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/files">
+              <ProtectedRoute>
+                <Files />
               </ProtectedRoute>
             </Route>
             <Route path="/contract">

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { FileText, FileCheck, Shield, Key, Book, Home as HomeIcon, LogIn, UserPlus, LayoutDashboard } from "lucide-react";
+import { FileText, FileCheck, Shield, Key, Book, Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
@@ -74,6 +74,13 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex items-center space-x-1">
                 <Key className="h-4 w-4" />
                 <span>DID 모듈</span>
+              </div>
+            </Link>
+
+            <Link href="/files" className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/files") ? "text-primary" : "text-muted-foreground"}`}>
+              <div className="flex items-center space-x-1">
+                <HardDrive className="h-4 w-4" />
+                <span>파일 관리</span>
               </div>
             </Link>
 

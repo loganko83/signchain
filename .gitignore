@@ -1,5 +1,5 @@
 node_modules
-dist
+# dist  # 임시로 주석 처리하여 빌드 결과 배포
 .DS_Store
 server/public
 vite.config.ts.*

@@ -114,4 +114,338 @@ class HeliaIPFSService {
           peerDiscovery: [
             bootstrap({
               list: [
-                '/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJ
+                '/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJbZ1wj8EeStabS53AUvg'
+              ]
+            })
+          ]
+        })
+      });
+
+      this.fs = unixfs(this.helia);
+      this.initialized = true;
+      
+      console.log('🌐 Helia IPFS Service initialized');
+      console.log('📊 Node ID:', this.helia.libp2p.peerId.toString());
+    } catch (error) {
+      console.error('❌ Failed to initialize Helia IPFS Service:', error);
+      // Fallback to mock service if Helia fails
+      await this.initializeFallback();
+    }
+  }
+
+  private async initializeFallback(): Promise<void> {
+    this.initialized = true;
+    console.log('📁 Fallback to Mock IPFS Service');
+  }
+
+  /**
+   * Upload file to IPFS with optimizations
+   */
+  async uploadFile(file: IPFSFile): Promise<string> {
+    await this.initialize();
+
+    try {
+      if (this.helia && this.fs) {
+        // 실제 IPFS에 업로드
+        const cid = await this.fs.addBytes(file.content);
+        const ipfsHash = cid.toString();
+        
+        // 로컬 캐시에도 저장 (빠른 액세스용)
+        await this.cacheFile(ipfsHash, file.content);
+        
+        console.log('🌐 File uploaded to IPFS:', ipfsHash);
+        return ipfsHash;
+      } else {
+        // Fallback: Mock 업로드
+        return await this.uploadFileToMock(file);
+      }
+    } catch (error) {
+      console.error('❌ IPFS upload failed, using fallback:', error);
+      return await this.uploadFileToMock(file);
+    }
+  }
+
+  /**
+   * Download file with performance optimizations
+   */
+  async downloadFile(hash: string, options: DownloadOptions = {}): Promise<Uint8Array> {
+    await this.initialize();
+
+    const {
+      useCache = true,
+      useCDN = true,
+      timeout = 30000
+    } = options;
+
+    try {
+      // 1. 캐시에서 먼저 확인
+      if (useCache) {
+        const cachedFile = await this.getCachedFile(hash);
+        if (cachedFile) {
+          console.log('⚡ File served from cache:', hash);
+          return cachedFile;
+        }
+      }
+
+      // 2. 실제 IPFS 노드에서 다운로드 시도
+      if (this.helia && this.fs) {
+        try {
+          const chunks: Uint8Array[] = [];
+          for await (const chunk of this.fs.cat(hash)) {
+            chunks.push(chunk);
+          }
+          const content = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
+          let offset = 0;
+          for (const chunk of chunks) {
+            content.set(chunk, offset);
+            offset += chunk.length;
+          }
+          
+          // 캐시에 저장
+          if (useCache) {
+            await this.cacheFile(hash, content);
+          }
+          
+          console.log('🌐 File downloaded from IPFS:', hash);
+          return content;
+        } catch (ipfsError) {
+          console.warn('⚠️ IPFS download failed, trying gateways:', ipfsError);
+        }
+      }
+
+      // 3. 공개 게이트웨이를 통한 다운로드 (병렬)
+      if (useCDN) {
+        const content = await this.downloadFromGateways(hash, timeout);
+        if (content) {
+          // 캐시에 저장
+          if (useCache) {
+            await this.cacheFile(hash, content);
+          }
+          console.log('🌍 File downloaded from gateway:', hash);
+          return content;
+        }
+      }
+
+      // 4. Fallback: 로컬 저장소에서 다운로드
+      const fallbackContent = await this.downloadFromMock(hash);
+      console.log('📁 File served from local storage:', hash);
+      return fallbackContent;
+
+    } catch (error) {
+      console.error('❌ All download methods failed:', error);
+      throw new Error(`Failed to download file: ${hash}`);
+    }
+  }
+
+  /**
+   * 병렬 게이트웨이 다운로드
+   */
+  private async downloadFromGateways(hash: string, timeout: number): Promise<Uint8Array | null> {
+    const downloadPromises = this.gateways.map(async (gateway) => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout / this.gateways.length);
+
+        const response = await fetch(`${gateway}${hash}`, {
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          return new Uint8Array(arrayBuffer);
+        }
+        return null;
+      } catch (error) {
+        return null;
+      }
+    });
+
+    // 첫 번째로 성공하는 다운로드 반환
+    try {
+      const result = await Promise.any(downloadPromises);
+      return result;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 캐시 파일 저장
+   */
+  private async cacheFile(hash: string, content: Uint8Array): Promise<void> {
+    try {
+      const cachePath = path.join(this.cacheDir, hash);
+      await fs.writeFile(cachePath, content);
+    } catch (error) {
+      console.warn('⚠️ Failed to cache file:', error);
+    }
+  }
+
+  /**
+   * 캐시에서 파일 가져오기
+   */
+  private async getCachedFile(hash: string): Promise<Uint8Array | null> {
+    try {
+      const cachePath = path.join(this.cacheDir, hash);
+      const fileBuffer = await fs.readFile(cachePath);
+      return new Uint8Array(fileBuffer);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Mock 업로드 (Fallback)
+   */
+  private async uploadFileToMock(file: IPFSFile): Promise<string> {
+    const hash = crypto.createHash('sha256').update(file.content).digest('hex');
+    const ipfsHash = `Qm${hash.substring(0, 44)}`;
+    const filePath = path.join(this.uploadsDir, ipfsHash);
+    
+    await fs.writeFile(filePath, file.content);
+    console.log('📁 File uploaded to Mock IPFS:', ipfsHash);
+    return ipfsHash;
+  }
+
+  /**
+   * Mock 다운로드 (Fallback)
+   */
+  private async downloadFromMock(hash: string): Promise<Uint8Array> {
+    const filePath = path.join(this.uploadsDir, hash);
+    const fileBuffer = await fs.readFile(filePath);
+    return new Uint8Array(fileBuffer);
+  }
+
+  /**
+   * Pin file (IPFS 노드에만 적용)
+   */
+  async pinFile(hash: string): Promise<void> {
+    if (this.helia) {
+      try {
+        await this.helia.pins.add(hash);
+        console.log('📌 File pinned:', hash);
+      } catch (error) {
+        console.warn('⚠️ Pin failed:', error);
+      }
+    }
+  }
+
+  /**
+   * Get file statistics with enhanced info
+   */
+  async getFileStats(hash: string): Promise<any> {
+    await this.initialize();
+
+    try {
+      // 캐시에서 통계 확인
+      const cachePath = path.join(this.cacheDir, hash);
+      try {
+        const stats = await fs.stat(cachePath);
+        return {
+          hash,
+          size: stats.size,
+          type: 'file',
+          cached: true,
+          blocks: 1
+        };
+      } catch {
+        // 캐시에 없음
+      }
+
+      // 실제 IPFS에서 통계 가져오기
+      if (this.helia && this.fs) {
+        try {
+          const stat = await this.fs.stat(hash);
+          return {
+            hash,
+            size: Number(stat.fileSize || 0),
+            type: stat.type,
+            cached: false,
+            blocks: stat.blocks || 1
+          };
+        } catch {
+          // IPFS에서 실패
+        }
+      }
+
+      // Fallback: Mock 통계
+      const mockPath = path.join(this.uploadsDir, hash);
+      const stats = await fs.stat(mockPath);
+      return {
+        hash,
+        size: stats.size,
+        type: 'file',
+        cached: false,
+        blocks: 1
+      };
+    } catch (error) {
+      throw new Error(`File not found: ${hash}`);
+    }
+  }
+
+  /**
+   * Check if file exists in any storage
+   */
+  async fileExists(hash: string): Promise<boolean> {
+    await this.initialize();
+
+    // 1. 캐시 확인
+    try {
+      const cachePath = path.join(this.cacheDir, hash);
+      await fs.access(cachePath);
+      return true;
+    } catch {
+      // 캐시에 없음
+    }
+
+    // 2. IPFS 확인
+    if (this.helia && this.fs) {
+      try {
+        await this.fs.stat(hash);
+        return true;
+      } catch {
+        // IPFS에 없음
+      }
+    }
+
+    // 3. Mock 저장소 확인
+    try {
+      const mockPath = path.join(this.uploadsDir, hash);
+      await fs.access(mockPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 캐시 정리
+   */
+  async clearCache(): Promise<void> {
+    try {
+      const files = await fs.readdir(this.cacheDir);
+      for (const file of files) {
+        await fs.unlink(path.join(this.cacheDir, file));
+      }
+      console.log('🧹 Cache cleared');
+    } catch (error) {
+      console.warn('⚠️ Failed to clear cache:', error);
+    }
+  }
+
+  /**
+   * Shutdown service
+   */
+  async shutdown(): Promise<void> {
+    if (this.helia) {
+      await this.helia.stop();
+      console.log('🔌 Helia IPFS Service stopped');
+    }
+  }
+}
+
+// Singleton instance
+export const ipfsService = new HeliaIPFSService();
+export type { FileMetadata, IPFSFile, DownloadOptions };

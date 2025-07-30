@@ -63,14 +63,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     };
 
     // Add file to IPFS
-    const cid = await ipfsFs.addFile({
-      content: req.file.buffer
-    });
+    const cid = await ipfsFs.addBytes(req.file.buffer);
 
     // Add metadata to IPFS
-    const metadataCid = await ipfsFs.addFile({
-      content: new TextEncoder().encode(JSON.stringify(fileMetadata, null, 2))
-    });
+    const metadataCid = await ipfsFs.addBytes(
+      new TextEncoder().encode(JSON.stringify(fileMetadata, null, 2))
+    );
 
     // Create response
     const response = {

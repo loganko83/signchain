@@ -1,11 +1,25 @@
 /**
- * Simplified IPFS Service for file storage
- * Mock implementation until Helia is properly configured
+ * Enhanced IPFS Service with Performance Optimizations
+ * Real IPFS implementation with advanced caching, compression, and parallel downloads
  */
 
+import { createHelia } from 'helia';
+import { unixfs } from '@helia/unixfs';
+import { MemoryBlockstore } from 'blockstore-core';
+import { MemoryDatastore } from 'datastore-core';
+import { createLibp2p } from 'libp2p';
+import { tcp } from '@libp2p/tcp';
+import { mplex } from '@libp2p/mplex';
+import { noise } from '@chainsafe/libp2p-noise';
+import { bootstrap } from '@libp2p/bootstrap';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import zlib from 'zlib';
+import { promisify } from 'util';
+
+const gzip = promisify(zlib.gzip);
+const gunzip = promisify(zlib.gunzip);
 
 interface IPFSFile {
   content: Uint8Array;
@@ -22,136 +36,82 @@ interface FileMetadata {
   uploadedBy: string;
   uploadedAt: Date;
   category: 'contract' | 'approval' | 'identity' | 'general';
+  compressed?: boolean;
 }
 
-class MockIPFSService {
-  private uploadsDir: string;
+interface DownloadOptions {
+  useCache?: boolean;
+  useCDN?: boolean;
+  useCompression?: boolean;
+  timeout?: number;
+  maxRetries?: number;
+  chunkSize?: number;
+}
+
+interface GatewayStats {
+  url: string;
+  responseTime: number;
+  successRate: number;
+  lastChecked: Date;
+}
+
+class HeliaIPFSService {
+  private helia: any;
+  private fs: any;
   private initialized = false;
+  private cacheDir: string;
+  private uploadsDir: string;
+  private compressionDir: string;
+
+  // 스마트 게이트웨이 관리
+  private gateways: GatewayStats[] = [
+    { url: 'https://ipfs.io/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://gateway.pinata.cloud/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://dweb.link/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://cloudflare-ipfs.com/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://cf-ipfs.com/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://ipfs.fleek.co/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() },
+    { url: 'https://gateway.temporal.cloud/ipfs/', responseTime: 0, successRate: 1, lastChecked: new Date() }
+  ];
+
+  // 성능 통계
+  private stats = {
+    uploads: 0,
+    downloads: 0,
+    cacheHits: 0,
+    compressionSaved: 0,
+    totalBytes: 0
+  };
 
   constructor() {
+    this.cacheDir = path.join(process.cwd(), 'cache', 'ipfs');
     this.uploadsDir = path.join(process.cwd(), 'uploads');
+    this.compressionDir = path.join(process.cwd(), 'cache', 'compressed');
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      // Create uploads directory if it doesn't exist
-      await fs.mkdir(this.uploadsDir, { recursive: true });
-      this.initialized = true;
-      console.log('📁 Mock IPFS Service initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize Mock IPFS Service:', error);
-      throw error;
-    }
-  }
+      // 모든 디렉토리 생성
+      await Promise.all([
+        fs.mkdir(this.cacheDir, { recursive: true }),
+        fs.mkdir(this.uploadsDir, { recursive: true }),
+        fs.mkdir(this.compressionDir, { recursive: true })
+      ]);
 
-  /**
-   * Generate a mock IPFS hash
-   */
-  private generateIPFSHash(content: Uint8Array): string {
-    const hash = crypto.createHash('sha256').update(content).digest('hex');
-    return `Qm${hash.substring(0, 44)}`;  // Mock IPFS hash format
-  }
-
-  /**
-   * Upload file to local storage (mock IPFS)
-   */
-  async uploadFile(file: IPFSFile): Promise<string> {
-    await this.initialize();
-
-    try {
-      const ipfsHash = this.generateIPFSHash(file.content);
-      const filePath = path.join(this.uploadsDir, ipfsHash);
-      
-      // Save file to local uploads directory
-      await fs.writeFile(filePath, file.content);
-      
-      console.log('📁 File uploaded to Mock IPFS:', ipfsHash);
-      return ipfsHash;
-    } catch (error) {
-      console.error('❌ Failed to upload file to Mock IPFS:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Download file from local storage (mock IPFS)
-   */
-  async downloadFile(hash: string): Promise<Uint8Array> {
-    await this.initialize();
-
-    try {
-      const filePath = path.join(this.uploadsDir, hash);
-      const fileBuffer = await fs.readFile(filePath);
-      
-      console.log('📥 File downloaded from Mock IPFS:', hash);
-      return new Uint8Array(fileBuffer);
-    } catch (error) {
-      console.error('❌ Failed to download file from Mock IPFS:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Pin file (no-op in mock implementation)
-   */
-  async pinFile(hash: string): Promise<void> {
-    console.log('📌 File pinned (mock):', hash);
-  }
-
-  /**
-   * Unpin file (no-op in mock implementation)
-   */
-  async unpinFile(hash: string): Promise<void> {
-    console.log('📌 File unpinned (mock):', hash);
-  }
-
-  /**
-   * Get file statistics
-   */
-  async getFileStats(hash: string): Promise<any> {
-    await this.initialize();
-
-    try {
-      const filePath = path.join(this.uploadsDir, hash);
-      const stats = await fs.stat(filePath);
-      
-      return {
-        hash,
-        size: stats.size,
-        type: 'file',
-        blocks: 1
-      };
-    } catch (error) {
-      console.error('❌ Failed to get file stats from Mock IPFS:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if file exists
-   */
-  async fileExists(hash: string): Promise<boolean> {
-    await this.initialize();
-
-    try {
-      const filePath = path.join(this.uploadsDir, hash);
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Shutdown service (no-op in mock implementation)
-   */
-  async shutdown(): Promise<void> {
-    console.log('🔌 Mock IPFS Service stopped');
-  }
-}
-
-// Singleton instance
-export const ipfsService = new MockIPFSService();
-export type { FileMetadata, IPFSFile };
+      // Helia IPFS 노드 생성 (개선된 설정)
+      this.helia = await createHelia({
+        blockstore: new MemoryBlockstore(),
+        datastore: new MemoryDatastore(),
+        libp2p: await createLibp2p({
+          addresses: {
+            listen: ['/ip4/127.0.0.1/tcp/0']
+          },
+          transports: [tcp()],
+          streamMuxers: [mplex()],
+          connectionEncryption: [noise()],
+          peerDiscovery: [
+            bootstrap({
+              list: [
+                '/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJ

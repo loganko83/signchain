@@ -66,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/refresh", refreshToken);
   app.get("/api/auth/me", authenticateToken, getCurrentUser);
   
-  // Legacy authentication routes (for backward compatibility)
+  // User registration route (JWT 기반으로 통일)
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const userData = insertUserSchema.parse(req.body);
@@ -74,12 +74,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
-        return res.status(400).json({ message: "사용자명이 이미 존재합니다" });
+        return res.status(400).json({ 
+          success: false, 
+          error: "사용자명이 이미 존재합니다" 
+        });
       }
 
       const existingEmail = await storage.getUserByEmail(userData.email);
       if (existingEmail) {
-        return res.status(400).json({ message: "이메일이 이미 존재합니다" });
+        return res.status(400).json({ 
+          success: false, 
+          error: "이메일이 이미 존재합니다" 
+        });
       }
 
       // Hash password using bcrypt
@@ -90,41 +96,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
       });
 
-      // Don't return password
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Don't return password, use JWT response format
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role || 'user'
+        }
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
+        return res.status(400).json({ 
+          success: false, 
+          error: error.errors[0].message 
+        });
       }
-      res.status(500).json({ message: "서버 오류가 발생했습니다" });
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: "서버 오류가 발생했습니다" 
+      });
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
-    try {
-      const loginData = loginSchema.parse(req.body);
-      
-      const user = await storage.getUserByUsername(loginData.username);
-      if (!user) {
-        return res.status(401).json({ message: "잘못된 사용자명 또는 비밀번호입니다" });
-      }
 
-      const isPasswordValid = await SecurityHelpers.verifyPassword(loginData.password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ message: "잘못된 사용자명 또는 비밀번호입니다" });
-      }
-
-      // Don't return password
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      res.status(500).json({ message: "서버 오류가 발생했습니다" });
-    }
-  });
 
   // Document routes
   app.get("/api/documents", async (req: Request, res: Response) => {

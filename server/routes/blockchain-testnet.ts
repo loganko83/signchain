@@ -1,3 +1,5 @@
+import { generateDocumentHash } from "../utils/crypto-utils";
+import crypto from "crypto";
 import { Router } from 'express';
 import { blockchainTestnetService } from '../blockchain-testnet';
 import { authenticateToken } from '../middleware/auth';

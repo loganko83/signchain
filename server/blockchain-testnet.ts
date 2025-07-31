@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { ethers } from 'ethers';
 import { generateDocumentHash } from './crypto';
 

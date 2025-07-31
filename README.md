@@ -339,3 +339,56 @@ NODE_ENV=production
 ---
 
 SignChain의 세 가지 모듈 시스템으로 다양한 전자서명 및 인증 요구사항을 한 번에 해결하세요! 🚀
+## 로컬 개발환경 구성 (Windows)
+
+### 필수 요구사항
+- Node.js 18+ 
+- npm 또는 yarn
+- Git
+- PowerShell (Windows)
+
+### 로컬 설정 단계
+
+1. **프로젝트 클론**
+```bash
+git clone https://github.com/loganko83/signchain.git
+cd signchain
+```
+
+2. **의존성 설치**
+```powershell
+# PowerShell에서 && 대신 ; 사용
+npm install ; npm run build
+```
+
+3. **환경변수 설정**
+```powershell
+# .env 파일 생성
+Copy-Item .env.example .env
+# .env 파일에서 필요한 값들을 설정하세요
+```
+
+4. **개발 서버 시작**
+```powershell
+# 백엔드 서버 (포트 3000)
+npm run dev:server
+
+# 새 터미널에서 프론트엔드 서버 (포트 5174)
+npm run dev:client
+```
+
+5. **접속 확인**
+- 프론트엔드: http://localhost:5174/
+- 백엔드 API: http://localhost:3000/
+- API 헬스체크: http://localhost:3000/api/v1/health
+
+### Git 워크플로우
+1. 테스트 브랜치에서 개발
+2. 충분한 테스트 후 Pull Request
+3. main 브랜치에 머지
+
+### 주의사항
+- PowerShell에서는 `&&` 연산자 대신 `;` 사용
+- 환경변수 설정 후 서버 재시작 필요
+- 데이터베이스는 Supabase를 사용 (무료 계정 권장)
+

@@ -60,3 +60,34 @@
    - 블록체인 연동 강화
    - 전자서명 워크플로우 개선
    - 협업 기능 확장
+
+## 최신 업데이트 (2025-07-31 오후)
+
+### ✅ 완료된 작업
+1. **GitHub 동기화**: 서버와 GitHub 저장소 완전 동기화 완료
+2. **보안 강화**: Personal Access Token 등 민감 정보 완전 제거
+3. **테스트 브랜치**: test 브랜치 생성 및 개발 워크플로우 구축
+4. **로컬 개발환경**: Windows PowerShell 환경을 위한 완전한 가이드 작성
+
+### 📋 Windows 로컬 개발환경 
+- **프로젝트 경로**: `C:\dev\signchain\BlockchainSignature`
+- **PowerShell 명령어**: `&&` 대신 `;` 사용
+- **개발 서버**: 
+  - 프론트엔드: http://localhost:5174/ (Vite)
+  - 백엔드: http://localhost:3000/ (Express)
+- **새로운 npm 스크립트**:
+  - `npm run dev:server` - 백엔드만 실행
+  - `npm run dev:client` - 프론트엔드만 실행
+  - `npm run dev:all` - 동시 실행
+
+### 🔄 Git 워크플로우 확립
+1. **테스트 브랜치에서 개발**
+2. **충분한 검증 후 Pull Request**
+3. **main 브랜치에 머지**
+4. **자동 커밋 시스템**: 파일 작업 완료 시 자동 커밋
+
+### 🚀 배포 프로세스
+- **로컬 개발** → **GitHub** → **서버 배포**
+- **Git 커맨드 체인**: `git add . && git commit -m "message" && git push`
+- **서버 자동 빌드**: PM2 재시작으로 실시간 배포
+

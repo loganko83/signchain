@@ -34,14 +34,14 @@ export class BlockchainTestnetService {
     const testnets: TestnetConfig[] = [
       {
         name: 'polygon-mumbai',
-        rpcUrl: 'https://polygon-mumbai.blockpi.network/v1/rpc/public',
+        rpcUrl: 'https://rpc-mumbai.maticvigil.com',
         chainId: 80001,
         explorerUrl: 'https://mumbai.polygonscan.com',
         gasPrice: '1.5'
       },
       {
         name: 'ethereum-sepolia',
-        rpcUrl: 'https://ethereum-sepolia.blockpi.network/v1/rpc/public',
+        rpcUrl: 'https://sepolia.infura.io/v3/your-infura-key',
         chainId: 11155111,
         explorerUrl: 'https://sepolia.etherscan.io',
         gasPrice: '20'

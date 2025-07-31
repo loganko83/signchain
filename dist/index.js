@@ -2720,14 +2720,14 @@ var init_blockchain_testnet = __esm({
         const testnets = [
           {
             name: "polygon-mumbai",
-            rpcUrl: "https://rpc-mumbai.maticvigil.com",
+            rpcUrl: "https://polygon-mumbai.blockpi.network/v1/rpc/public",
             chainId: 80001,
             explorerUrl: "https://mumbai.polygonscan.com",
             gasPrice: "1.5"
           },
           {
             name: "ethereum-sepolia",
-            rpcUrl: "https://sepolia.infura.io/v3/your-infura-key",
+            rpcUrl: "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
             chainId: 11155111,
             explorerUrl: "https://sepolia.etherscan.io",
             gasPrice: "20"

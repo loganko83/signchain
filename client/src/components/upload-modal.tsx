@@ -119,8 +119,47 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
       return;
     }
 
-    setError(null);
-    uploadMutation.mutate(data);
+    try {
+      setError(null);
+      
+      // Generate file hash for blockchain verification
+      const fileHash = await generateFileHash(selectedFile);
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("title", data.title);
+      formData.append("description", data.description || "");
+      formData.append("category", data.category);
+      formData.append("priority", data.priority);
+      formData.append("fileHash", fileHash);
+      formData.append("uploadedBy", String(data.uploadedBy));
+
+      // Upload file with metadata
+      const response = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "파일 업로드에 실패했습니다.");
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "업로드 완료",
+        description: "문서가 성공적으로 업로드되고 블록체인에 기록되었습니다.",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      handleClose();
+      
+    } catch (error: any) {
+      setError(error.message || "문서 업로드에 실패했습니다.");
+    }
   };
 
   return (

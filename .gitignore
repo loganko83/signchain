@@ -4,6 +4,7 @@ node_modules
 server/public
 vite.config.ts.*
 *.tar.gz
+uploads/  # 업로드된 파일들
 
 # Environment files
 .env

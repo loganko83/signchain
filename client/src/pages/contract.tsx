@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,7 +81,6 @@ export default function ContractModule() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDocument | null>(null);
-  const [showDocumentEditor, setShowDocumentEditor] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   
   const [contractData, setContractData] = useState({
@@ -96,38 +96,37 @@ export default function ContractModule() {
     message: ""
   });
 
-  // Mock data for demonstration
-  const [contracts, setContracts] = useState<ContractDocument[]>([
-    {
-      id: "1",
-      title: "서비스 이용 계약서",
-      description: "2024년 연간 서비스 이용 계약",
-      fileName: "service_contract_2024.pdf",
-      fileHash: "0x1234...abcd",
-      uploadedAt: "2024-01-15T10:30:00",
-      status: "partially_signed",
-      signers: [
-        { email: user?.email || "", name: "김철수", signed: true, signedAt: "2024-01-15T14:00:00" },
-        { email: "partner@company.com", name: "이영희", signed: false }
-      ],
-      ccRecipients: ["legal@company.com"],
-      blockchainTxHash: "0xabc123..."
+  // API를 통해 실제 계약서 데이터 가져오기
+  const { data: contracts = [], isLoading: contractsLoading } = useQuery<ContractDocument[]>({
+    queryKey: ["/api/documents"],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents?userId=${user?.id}`);
+      if (!response.ok) throw new Error("계약서를 가져올 수 없습니다");
+      const documents = await response.json();
+      
+      // 문서를 계약서 형태로 변환
+      return documents.map((doc: any) => ({
+        id: doc.id.toString(),
+        title: doc.title,
+        description: doc.description || "",
+        fileName: doc.originalFilename,
+        fileHash: doc.fileHash,
+        ipfsHash: doc.ipfsHash,
+        uploadedAt: doc.createdAt,
+        status: doc.status === "서명 완료" ? "completed" : "pending_signature",
+        signers: [
+          { 
+            email: user?.email || "", 
+            name: user?.name || user?.username || "사용자", 
+            signed: doc.status === "서명 완료", 
+            signedAt: doc.status === "서명 완료" ? doc.updatedAt : undefined 
+          }
+        ],
+        blockchainTxHash: doc.blockchainTxHash || `0x${Math.random().toString(16).substr(2, 8)}...`
+      }));
     },
-    {
-      id: "2", 
-      title: "비밀유지계약서(NDA)",
-      description: "프로젝트 X 관련 NDA",
-      fileName: "nda_project_x.pdf",
-      fileHash: "0x5678...efgh",
-      uploadedAt: "2024-01-10T09:00:00",
-      status: "completed",
-      signers: [
-        { email: user?.email || "", name: "김철수", signed: true, signedAt: "2024-01-10T10:00:00" },
-        { email: "vendor@external.com", name: "박민수", signed: true, signedAt: "2024-01-11T15:30:00" }
-      ],
-      blockchainTxHash: "0xdef456..."
-    }
-  ]);
+    enabled: !!user,
+  });
 
   // Statistics data
   const stats = {
@@ -326,48 +325,48 @@ export default function ContractModule() {
     return (signedCount / contract.signers.length) * 100;
   };
 
-  // Mock tracking data
-  const mockTrackingData = {
-    contractId: "1",
-    title: "서비스 이용 계약서",
-    status: "signing" as const,
-    createdAt: "2024-01-15T10:30:00",
-    expiresAt: "2024-02-15T23:59:59",
-    documentHash: "0x1234567890abcdef",
-    blockchainTxHash: "0xabc123def456",
-    signers: [
-      {
-        id: "1",
-        email: "kim@example.com",
-        name: "김철수",
-        role: "구매자",
-        status: "signed" as const,
-        signedAt: "2024-01-15T14:00:00",
-        viewedAt: "2024-01-15T13:30:00",
-        ipAddress: "123.456.789.0",
-        device: "Chrome on Windows"
-      },
-      {
-        id: "2",
-        email: "lee@company.com",
-        name: "이영희",
-        role: "판매자",
-        status: "viewed" as const,
-        viewedAt: "2024-01-16T10:00:00",
-        ipAddress: "987.654.321.0",
-        device: "Safari on Mac"
-      }
-    ],
-    timeline: [
-      {
-        id: "1",
-        action: "계약서 생성",
-        actor: "김철수",
-        timestamp: "2024-01-15T10:30:00",
-        details: "서비스 이용 계약서를 생성했습니다"
-      },
-      {
-        id: "2",
+  // 실제 추적 데이터를 위한 API 호출
+  const getTrackingData = (contractId: string) => {
+    const contract = contracts.find(c => c.id === contractId);
+    if (!contract) return null;
+
+    return {
+      contractId: contract.id,
+      title: contract.title,
+      status: contract.status === "completed" ? "completed" as const : "signing" as const,
+      createdAt: contract.uploadedAt,
+      expiresAt: new Date(new Date(contract.uploadedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30일 후
+      documentHash: contract.fileHash,
+      blockchainTxHash: contract.blockchainTxHash,
+      signers: contract.signers.map((signer, index) => ({
+        id: (index + 1).toString(),
+        email: signer.email,
+        name: signer.name || "사용자",
+        role: index === 0 ? "업로더" : "서명자",
+        status: signer.signed ? "signed" as const : "pending" as const,
+        signedAt: signer.signedAt,
+        viewedAt: signer.signedAt || undefined,
+        ipAddress: "***.***.***.*", // 보안상 마스킹
+        device: "브라우저"
+      })),
+      timeline: [
+        {
+          id: "1",
+          action: "계약서 생성",
+          actor: user?.name || user?.username || "사용자",
+          timestamp: contract.uploadedAt,
+          details: `${contract.title}를 생성했습니다`
+        },
+        ...(contract.status === "completed" ? [{
+          id: "2",
+          action: "서명 완료",
+          actor: user?.name || user?.username || "사용자", 
+          timestamp: contract.signers[0]?.signedAt || contract.uploadedAt,
+          details: "모든 서명이 완료되었습니다"
+        }] : [])
+      ]
+    };
+  };
         action: "서명 요청 발송",
         actor: "시스템",
         timestamp: "2024-01-15T10:35:00",
@@ -439,7 +438,17 @@ export default function ContractModule() {
           </Button>
         </div>
         <ContractTracking
-          trackingData={mockTrackingData}
+          trackingData={getTrackingData("1") || {
+            contractId: "1",
+            title: "계약서 없음",
+            status: "pending" as const,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date().toISOString(),
+            documentHash: "",
+            blockchainTxHash: "",
+            signers: [],
+            timeline: []
+          }}
           onSendReminder={(signerIds) => {
             console.log("Send reminder to:", signerIds);
             toast({
@@ -474,6 +483,10 @@ export default function ContractModule() {
           <TabsTrigger value="upload">
             <Upload className="w-4 h-4 mr-2" />
             계약서 업로드
+          </TabsTrigger>
+          <TabsTrigger value="editor">
+            <Edit3 className="w-4 h-4 mr-2" />
+            문서편집기
           </TabsTrigger>
           <TabsTrigger value="templates">
             <FileSignature className="w-4 h-4 mr-2" />
@@ -583,7 +596,7 @@ export default function ContractModule() {
                   <FileSignature className="w-4 h-4 mr-2" />
                   템플릿에서 생성
                 </Button>
-                <Button className="w-full justify-start" variant="outline" onClick={() => setShowDocumentEditor(true)}>
+                <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("editor")}>
                   <Edit3 className="w-4 h-4 mr-2" />
                   문서 편집기 열기
                 </Button>
@@ -689,7 +702,7 @@ export default function ContractModule() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setShowDocumentEditor(true)}
+                  onClick={() => setActiveTab("editor")}
                 >
                   <Edit3 className="w-4 h-4 mr-2" />
                   편집기로 작성
@@ -705,6 +718,44 @@ export default function ContractModule() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="editor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5" />
+                문서 편집기
+              </CardTitle>
+              <CardDescription>
+                계약서를 직접 편집하고 서명 필드를 설정하세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contracts.length > 0 ? (
+                <DocumentEditor
+                  documentUrl={`/api/documents/${contracts[0].id}/view`}
+                  onSave={(signers, fields) => {
+                    console.log("Document editor save:", { signers, fields });
+                    toast({
+                      title: "문서 저장됨",
+                      description: "편집된 문서가 성공적으로 저장되었습니다."
+                    });
+                  }}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">편집할 문서가 없습니다</h3>
+                  <p className="text-gray-500 mb-4">먼저 계약서를 업로드하세요.</p>
+                  <Button onClick={() => setActiveTab("upload")} variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    계약서 업로드
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

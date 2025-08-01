@@ -32,8 +32,8 @@ const PageLoading = () => (
 );
 
 function Router() {
-  // Base path 설정 - 프로덕션에서는 /signchain/, 개발에서는 /
-  const basePath = import.meta.env.PROD ? '/signchain' : '';
+  // Base path 설정 - 개발/프로덕션 모두 /signchain 사용
+  const basePath = '/signchain';
   
   return (
     <WouterRouter base={basePath}>

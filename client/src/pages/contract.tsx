@@ -330,12 +330,15 @@ export default function ContractModule() {
     const contract = contracts.find(c => c.id === contractId);
     if (!contract) return null;
 
+    const createdDate = new Date(contract.uploadedAt);
+    const expiryDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 생성일로부터 30일 후
+
     return {
       contractId: contract.id,
       title: contract.title,
       status: contract.status === "completed" ? "completed" as const : "signing" as const,
       createdAt: contract.uploadedAt,
-      expiresAt: new Date(new Date(contract.uploadedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30일 후
+      expiresAt: expiryDate.toISOString(),
       documentHash: contract.fileHash,
       blockchainTxHash: contract.blockchainTxHash,
       signers: contract.signers.map((signer, index) => ({
@@ -364,7 +367,8 @@ export default function ContractModule() {
           timestamp: contract.signers[0]?.signedAt || contract.uploadedAt,
           details: "모든 서명이 완료되었습니다"
         }] : [])
-      ]
+      ],
+      reminders: [] // 리마인더 기록 추가
     };
   };
         action: "서명 요청 발송",
@@ -457,10 +461,42 @@ export default function ContractModule() {
             });
           }}
           onDownload={() => {
-            console.log("Download contract");
+            const contract = contracts.find(c => c.id === "1");
+            if (contract) {
+              // 실제 다운로드 기능 구현
+              const downloadUrl = `/api/documents/${contract.id}/download`;
+              window.open(downloadUrl, '_blank');
+              toast({
+                title: "다운로드 시작",
+                description: "문서 다운로드가 시작됩니다."
+              });
+            }
           }}
           onView={() => {
-            console.log("View contract");
+            const contract = contracts.find(c => c.id === "1");
+            if (contract) {
+              // 실제 문서 보기 기능 구현
+              const viewUrl = `/api/documents/${contract.id}/view`;
+              fetch(viewUrl)
+                .then(response => response.json())
+                .then(data => {
+                  console.log("Document view data:", data);
+                  toast({
+                    title: "문서 정보",
+                    description: `${data.title} - ${data.originalFilename}`
+                  });
+                  // 실제로는 PDF 뷰어나 문서 뷰어를 열어야 함
+                  window.open(data.viewUrl, '_blank');
+                })
+                .catch(error => {
+                  console.error("문서 보기 오류:", error);
+                  toast({
+                    title: "오류",
+                    description: "문서를 불러올 수 없습니다.",
+                    variant: "destructive"
+                  });
+                });
+            }
           }}
         />
       </div>

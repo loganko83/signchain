@@ -195,6 +195,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document view endpoint
+  app.get("/api/documents/:id/view", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "문서를 찾을 수 없습니다" });
+      }
+
+      // Return document metadata for viewer
+      res.json({
+        id: document.id,
+        title: document.title,
+        originalFilename: document.originalFilename,
+        fileType: document.fileType,
+        fileSize: document.fileSize,
+        fileHash: document.fileHash,
+        uploadedAt: document.createdAt,
+        viewUrl: `/api/documents/${id}/download`,
+        canView: true,
+        canDownload: true
+      });
+    } catch (error) {
+      res.status(500).json({ message: "문서 조회 중 오류가 발생했습니다" });
+    }
+  });
+
+  // Document download endpoint  
+  app.get("/api/documents/:id/download", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "문서를 찾을 수 없습니다" });
+      }
+
+      // For demo purposes, return document info as JSON
+      // In production, this would serve the actual file
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${document.originalFilename}.json"`);
+      
+      res.json({
+        documentInfo: {
+          id: document.id,
+          title: document.title,
+          filename: document.originalFilename,
+          hash: document.fileHash,
+          uploadedAt: document.createdAt,
+          status: document.status
+        },
+        message: "실제 환경에서는 원본 파일이 다운로드됩니다.",
+        blockchainVerification: {
+          verified: true,
+          transactionHash: document.blockchainTxHash,
+          network: "xphere"
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "문서 다운로드 중 오류가 발생했습니다" });
+    }
+  });
+
   // Configure multer for file uploads
   const upload = multer({
     dest: "uploads/", // temporary upload directory

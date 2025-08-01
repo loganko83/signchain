@@ -51,6 +51,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and register DID routes
   const didRoutes = await import("./routes/did");
   app.use("/api/did", didRoutes.default);
+
+  // Import and register Blockchain Testnet routes
+  const blockchainTestnetRoutes = await import("./routes/blockchain-testnet");
+  app.use("/api/blockchain-testnet", blockchainTestnetRoutes.default);
   
   // Import and register Files routes (IPFS)
   const filesRoutes = await import("./routes/files");

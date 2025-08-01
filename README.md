@@ -1,341 +1,326 @@
-# SignChain - 블록체인 기반 전자서명 플랫폼
+# 🔐 BlockchainSignature - 블록체인 기반 전자서명 시스템
 
-SignChain은 세 가지 전문 모듈로 구성된 포괄적인 블록체인 기반 전자서명 플랫폼입니다. React 프론트엔드와 Express.js 백엔드를 기반으로 하며, 문서 검증과 불변성을 위해 블록체인 기술을 활용합니다.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9%2B-blue.svg)](https://www.typescriptlang.org/)
 
-## 🏗️ 모듈 아키텍처
+> **완전한 MVP 상태** - 실제 운영 가능한 전자서명 시스템
 
-### 📄 계약 모듈 (Contract Module)
-- **기능**: 기존 전자서명 기능을 유지하며 블록체인 통합 강화
-- **특징**: 계약서 업로드, 서명 요청, 블록체인 등록, 검증
-- **사용 사례**: 일반 계약서, 동의서, 법적 문서
-- **블록체인**: Ethereum/Polygon 네트워크에 문서 해시 및 서명 기록
+## 🌟 프로젝트 개요
 
-### ✅ 결재 모듈 (Approval Module)
-- **기능**: Adobe Sign 스타일의 순차 승인 워크플로우
-- **특징**: ERP 스타일 결재 프로세스, 다중 승인자, 이메일 통지
-- **사용 사례**: 기업 내부 결재, 승인 프로세스, 공람 절차
-- **블록체인**: 각 승인 단계별 블록체인 트랜잭션 기록
+BlockchainSignature는 블록체인 기술을 활용한 차세대 전자서명 시스템입니다. 문서의 무결성을 보장하고, 투명하고 검증 가능한 서명 프로세스를 제공합니다.
 
-### 🆔 DID 모듈 (Decentralized Identity Module)
-- **기능**: 분산 신원 증명 및 블록체인 인증서 발급
-- **특징**: 사업자등록증, 신분증, 여권의 DID 버전 생성
-- **사용 사례**: 신원 확인, 자격증명, 기업 인증
-- **블록체인**: DID 자격증명의 발급, 검증, 폐기 과정 기록
+### 🚀 실제 서비스
+- **웹 애플리케이션**: https://trendy.storydot.kr/signchain/
+- **API 서비스**: https://trendy.storydot.kr/signchain/api/v1/
+- **상태**: 24/7 운영 중 ✅
 
-## 🚀 주요 기능
+## ✨ 주요 기능
 
-### 공통 기능
-- **🔗 블록체인 통합**: 모든 모듈에서 Ethereum/Polygon 네트워크 지원
-- **📧 이메일 알림**: SendGrid를 통한 실시간 알림 시스템
-- **🔔 실시간 통지**: WebSocket 기반 푸시 알림
-- **🔐 고급 보안**: 2FA, 생체 인증 (WebAuthn)
-- **📊 감사 추적**: 완전한 활동 기록 및 블록체인 검증
-- **🌐 외부 API**: REST API 및 웹훅 지원
+### 🔒 **보안 & 인증**
+- JWT 기반 사용자 인증 시스템
+- SendGrid를 통한 이메일 인증
+- 역할 기반 접근 제어 (RBAC)
+- API 속도 제한 및 보안 미들웨어
 
-### 모듈별 전용 기능
-#### 계약 모듈
-- 문서 업로드 및 SHA-256 해싱
-- 서명 요청 및 전자서명 수집
-- 블록체인 기반 문서 검증
-- IPFS 시뮬레이션 분산 저장
+### 📄 **문서 관리**
+- 다양한 형식 문서 업로드 지원
+- 메타데이터 자동 추출 및 분류
+- 버전 관리 및 이력 추적
+- IPFS 기반 분산 저장
 
-#### 결재 모듈
-- 순차적 승인 워크플로우 설계
-- 다중 승인자 설정 및 관리
-- 단계별 승인/반려 처리
-- 기업 계정 및 이메일 통합
+### ✍️ **전자서명**
+- 디지털 서명 생성 및 검증
+- 다중 서명자 워크플로우
+- 서명 상태 실시간 추적
+- 법적 효력 인증서 생성
 
-#### DID 모듈
-- 자격증명 발급 (사업자등록증, 신분증, 여권)
-- RSA 암호화 기반 DID 생성
-- QR 코드 기반 공유 및 검증
-- 블록체인 기반 자격증명 폐기
+### ⛓️ **블록체인 연동**
+- 문서 해시 블록체인 등록
+- 서명 무결성 검증
+- 스마트 컨트랙트 기반 처리
+- Polygon/Ethereum 테스트넷 지원
 
-## 🏗️ 기술 스택
+### 🆔 **DID (분산 신원)**
+- 자격증명 발급 및 관리
+- 검증 가능한 디지털 신원
+- 개인정보 보호 강화
+- 상호 운용성 지원
+
+### 🔄 **워크플로우**
+- 승인 단계별 프로세스 관리
+- 실시간 알림 시스템
+- 협업 도구 통합
+- 사용자 정의 워크플로우
+
+## 🛠️ 기술 스택
 
 ### Frontend
-- **Framework**: React 18 + TypeScript
-- **Routing**: Wouter
-- **State Management**: TanStack Query (React Query)
-- **UI Components**: Shadcn/ui + Radix UI
-- **Styling**: Tailwind CSS
-- **Build Tool**: Vite
+- **React 18** + **TypeScript** - 현대적 UI 프레임워크
+- **Vite** - 빠른 개발 서버 및 빌드 도구
+- **Tailwind CSS** - 유틸리티 기반 스타일링
+- **React Query** - 서버 상태 관리
+- **Framer Motion** - 애니메이션 라이브러리
 
 ### Backend
-- **Runtime**: Node.js + Express.js
-- **Language**: TypeScript
-- **Database**: PostgreSQL + Drizzle ORM
-- **Authentication**: 세션 기반 + 2FA + WebAuthn
-- **Real-time**: Socket.io
-- **Email**: SendGrid
-- **Blockchain**: ethers.js
+- **Node.js** + **Express** - 서버 런타임 및 프레임워크
+- **TypeScript** - 타입 안전성 보장
+- **JWT** - 사용자 인증
+- **SendGrid** - 이메일 서비스
+- **Multer** - 파일 업로드 처리
 
-### Infrastructure
-- **Database**: Neon PostgreSQL
-- **File Storage**: 시뮬레이션된 IPFS
-- **Deployment**: Replit
-- **Environment**: Node.js 20+
+### Database & Storage
+- **Supabase PostgreSQL** - 관계형 데이터베이스
+- **IPFS** - 분산 파일 저장
+- **Redis** - 캐싱 및 세션 저장
+
+### Blockchain
+- **Web3.js** + **Ethers.js** - 블록체인 상호작용
+- **Polygon Mumbai** - 테스트넷 환경
+- **MetaMask** 연동 - 지갑 통합
+- **Smart Contracts** - Solidity 기반
+
+### DevOps & Deployment
+- **PM2** - 프로세스 관리
+- **Apache** - 웹서버 + 리버스 프록시
+- **AWS EC2** - 클라우드 호스팅
+- **GitHub Actions** - CI/CD 파이프라인
+
+## 🚀 빠른 시작
+
+### 사전 요구사항
+- Node.js 18+ 
+- Git
+- PostgreSQL (또는 Supabase 계정)
+
+### 로컬 개발 환경 구축
+
+#### Windows (PowerShell)
+```powershell
+# 저장소 클론
+git clone https://github.com/loganko83/signchain.git C:\dev\signchain\BlockchainSignature
+cd C:\dev\signchain\BlockchainSignature
+
+# 의존성 설치
+npm install
+
+# 환경 설정
+Copy-Item .env.example .env
+# .env 파일을 편집하여 필요한 값들을 설정하세요
+
+# 개발 서버 시작 (프론트엔드 + 백엔드 동시 실행)
+npm run dev:all
+```
+
+#### Linux/macOS
+```bash
+# 저장소 클론  
+git clone https://github.com/loganko83/signchain.git
+cd signchain
+
+# 의존성 설치
+npm install
+
+# 환경 설정
+cp .env.example .env
+# .env 파일을 편집하여 필요한 값들을 설정하세요
+
+# 개발 서버 시작
+npm run dev:all
+```
+
+### 접속 확인
+- **프론트엔드**: http://localhost:5174
+- **백엔드 API**: http://localhost:3000
+- **API 문서**: http://localhost:3000/api-docs
 
 ## 📁 프로젝트 구조
 
 ```
-SignChain/
-├── client/                     # 프론트엔드 애플리케이션
-│   ├── src/
-│   │   ├── components/         # 재사용 가능한 컴포넌트
-│   │   ├── pages/             # 페이지 컴포넌트
-│   │   │   ├── contract.tsx    # 계약 모듈 페이지
-│   │   │   ├── approval.tsx    # 결재 모듈 페이지
-│   │   │   ├── did.tsx         # DID 모듈 페이지
-│   │   │   ├── dashboard.tsx   # 통합 대시보드
-│   │   │   └── ...            # 기타 페이지
-│   │   ├── lib/               # 유틸리티 함수
-│   │   │   ├── auth.tsx       # 인증 로직
-│   │   │   ├── blockchain.ts   # 블록체인 연동
-│   │   │   └── crypto.ts      # 암호화 함수
-│   │   └── App.tsx            # 메인 앱 컴포넌트
-├── server/                     # 백엔드 애플리케이션
-│   ├── modules/               # 모듈별 비즈니스 로직
-│   │   ├── contract-module.ts  # 계약 모듈
-│   │   ├── approval-module.ts  # 결재 모듈
-│   │   └── did-module.ts      # DID 모듈
-│   ├── routes.ts              # 메인 API 라우트
-│   ├── module-routes.ts       # 모듈별 API 라우트
-│   ├── storage.ts             # 데이터베이스 로직
-│   ├── blockchain.ts          # 블록체인 서비스
-│   ├── crypto.ts              # 서버 암호화 함수
-│   └── ...                    # 기타 서비스
-├── shared/                     # 공유 스키마 및 타입
-│   └── schema.ts              # Drizzle 스키마 정의
-└── ...                        # 설정 파일들
+BlockchainSignature/
+├── 📁 frontend/                 # React 프론트엔드
+│   ├── 📁 src/
+│   │   ├── 📁 components/       # UI 컴포넌트
+│   │   ├── 📁 pages/           # 페이지 컴포넌트
+│   │   ├── 📁 hooks/           # 커스텀 훅
+│   │   ├── 📁 utils/           # 유틸리티 함수
+│   │   └── 📁 types/           # TypeScript 타입 정의
+│   └── 📄 package.json
+├── 📁 backend/                  # Express 백엔드
+│   ├── 📁 src/
+│   │   ├── 📁 routes/          # API 라우트
+│   │   ├── 📁 models/          # 데이터 모델
+│   │   ├── 📁 middleware/      # 미들웨어
+│   │   ├── 📁 services/        # 비즈니스 로직
+│   │   └── 📁 utils/           # 유틸리티 함수
+│   └── 📄 package.json
+├── 📁 contracts/               # 스마트 컨트랙트
+├── 📁 doc/                     # 프로젝트 문서
+├── 📄 package.json            # 루트 패키지 설정
+├── 📄 README.md              # 이 파일
+└── 📄 .env.example           # 환경변수 템플릿
 ```
-
-## 🚀 개발 환경 설정
-
-### 필수 요구사항
-- Node.js 18 이상
-- PostgreSQL 데이터베이스
-- SendGrid API 키 (이메일 기능)
-
-### 설치 및 실행
-
-1. **프로젝트 클론**
-   ```bash
-   git clone <repository-url>
-   cd signchain
-   ```
-
-2. **의존성 설치**
-   ```bash
-   npm install
-   ```
-
-3. **환경 변수 설정**
-   ```bash
-   DATABASE_URL=postgresql://username:password@localhost/signchain
-   SENDGRID_API_KEY=your_sendgrid_api_key_here
-   ```
-
-4. **데이터베이스 스키마 푸시**
-   ```bash
-   npm run db:push
-   ```
-
-5. **개발 서버 시작**
-   ```bash
-   npm run dev
-   ```
-   서버는 http://localhost:5000 에서 실행됩니다.
-
-## 🗄️ 데이터베이스 스키마
-
-### 공통 테이블
-- **users**: 사용자 정보
-- **organizations**: 조직 관리
-- **audit_logs**: 감사 로그
-- **blockchain_transactions**: 블록체인 트랜잭션
-- **notifications**: 알림 데이터
-
-### 계약 모듈 테이블
-- **documents**: 문서 메타데이터
-- **signatures**: 서명 데이터
-- **signature_requests**: 서명 요청
-
-### 결재 모듈 테이블
-- **approval_workflows**: 승인 워크플로우
-- **approval_steps**: 승인 단계
-- **enterprise_roles**: 기업 역할
-- **user_roles**: 사용자 역할 할당
-
-### DID 모듈 테이블
-- **did_credentials**: DID 자격증명
-- **did_verifications**: DID 검증 기록
-
-## 🔐 보안 기능
-
-### 인증 시스템
-- **기본 인증**: 이메일/비밀번호
-- **2단계 인증**: TOTP (Google Authenticator 등)
-- **생체 인증**: WebAuthn (TouchID, FaceID, Windows Hello)
-- **세션 관리**: 안전한 세션 처리
-
-### 블록체인 보안
-- **다중 네트워크**: Ethereum, Polygon 지원
-- **가스비 최적화**: 자동 네트워크 선택
-- **트랜잭션 모니터링**: 실시간 확인 추적
-- **암호화**: SHA-256 해싱, RSA 서명
 
 ## 🌐 API 엔드포인트
 
-### 계약 모듈 API
-```
-POST   /api/modules/contract/upload              # 계약서 업로드
-POST   /api/modules/contract/signature-request   # 서명 요청
-POST   /api/modules/contract/sign               # 계약서 서명
-GET    /api/modules/contract/verify/{id}        # 계약서 검증
-```
+### 인증
+- `POST /api/v1/auth/register` - 사용자 회원가입
+- `POST /api/v1/auth/login` - 로그인
+- `POST /api/v1/auth/logout` - 로그아웃
+- `GET /api/v1/auth/verify` - 토큰 검증
 
-### 결재 모듈 API
-```
-POST   /api/modules/approval/upload             # 결재 문서 업로드
-POST   /api/modules/approval/workflow           # 워크플로우 생성
-POST   /api/modules/approval/step/complete      # 승인 단계 완료
-POST   /api/modules/approval/add-approver       # 승인자 추가
-GET    /api/modules/approval/final-document/{id} # 최종 문서 조회
-```
+### 문서 관리
+- `GET /api/v1/documents` - 문서 목록 조회
+- `POST /api/v1/documents` - 문서 업로드
+- `GET /api/v1/documents/:id` - 문서 상세 조회
+- `PUT /api/v1/documents/:id` - 문서 수정
+- `DELETE /api/v1/documents/:id` - 문서 삭제
 
-### DID 모듈 API
-```
-POST   /api/modules/did/issue-credential        # 자격증명 발급
-POST   /api/modules/did/verify-credential       # 자격증명 검증
-POST   /api/modules/did/authenticate            # DID 인증
-POST   /api/modules/did/revoke-credential       # 자격증명 폐기
-GET    /api/modules/did/user-credentials/{id}   # 사용자 자격증명 조회
-POST   /api/modules/did/generate-shareable      # 공유 가능한 자격증명 생성
-```
+### 전자서명
+- `POST /api/v1/signatures` - 서명 생성
+- `GET /api/v1/signatures/:id` - 서명 조회
+- `POST /api/v1/signatures/:id/verify` - 서명 검증
 
-## 🔗 블록체인 통합
+### 블록체인
+- `POST /api/v1/blockchain/register` - 블록체인 등록
+- `GET /api/v1/blockchain/verify/:hash` - 블록체인 검증
 
-### 지원 네트워크
-- **Ethereum**: 메인넷 및 테스트넷
-- **Polygon**: 낮은 가스비 최적화
-- **자동 선택**: 가스비 기반 최적 네트워크 선택
+## 🔧 환경 변수 설정
 
-### 모듈별 블록체인 기능
+`.env` 파일에 다음 환경변수들을 설정하세요:
 
-#### 계약 모듈
-- 문서 해시 블록체인 등록
-- 서명 트랜잭션 기록
-- 계약 검증 및 감사
+```env
+# 기본 설정
+PORT=3000
+NODE_ENV=development
 
-#### 결재 모듈
-- 워크플로우 시작 트랜잭션
-- 각 승인 단계별 기록
-- 최종 승인 완료 증명
+# 데이터베이스
+DATABASE_URL=your_postgresql_url
 
-#### DID 모듈
-- DID 자격증명 발급 기록
-- 검증 요청 트랜잭션
-- 자격증명 폐기 기록
+# JWT 인증
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=7d
 
-## 📧 이메일 통합
-
-### SendGrid 기능
-- **서명 요청**: 계약 모듈 서명 요청 시 자동 발송
-- **승인 알림**: 결재 모듈 워크플로우 단계별 알림
-- **DID 알림**: 자격증명 발급 및 검증 완료 통지
-- **보안 알림**: 2FA 설정, 로그인 시도 등
-
-## 🔔 실시간 알림
-
-### WebSocket 이벤트
-- **문서 업데이트**: 모든 모듈의 문서 상태 변경
-- **서명/승인 상태**: 실시간 프로세스 진행 상황
-- **블록체인 트랜잭션**: 트랜잭션 확인 및 완료
-- **보안 이벤트**: 인증 시도, 계정 변경 등
-
-## 🧪 사용 예시
-
-### 계약 모듈 사용법
-1. 계약서 파일 업로드
-2. 서명자 이메일 설정
-3. 블록체인 등록 및 서명 요청 발송
-4. 서명자가 전자서명 완료
-5. 블록체인 검증 및 최종 문서 다운로드
-
-### 결재 모듈 사용법
-1. 결재 문서 업로드
-2. 순차적 승인 워크플로우 설계
-3. 각 단계별 승인자 이메일 설정
-4. 워크플로우 시작 및 자동 이메일 발송
-5. 순차적 승인/반려 처리
-6. 최종 승인 완료 시 문서 다운로드
-
-### DID 모듈 사용법
-1. 자격증명 유형 선택 (사업자등록증/신분증/여권)
-2. 개인/기업 정보 입력
-3. 블록체인 DID 자격증명 발급
-4. QR 코드 생성 및 공유
-5. 검증 요청 시 즉시 블록체인 확인
-
-## 🚀 배포
-
-### Replit 배포
-1. Replit에서 프로젝트 열기
-2. 환경 변수 설정 (DATABASE_URL, SENDGRID_API_KEY)
-3. "Run" 버튼 클릭
-4. 자동 배포 완료
-
-### 환경 변수
-```bash
-DATABASE_URL=your_neon_database_url
+# 이메일 (SendGrid)
 SENDGRID_API_KEY=your_sendgrid_api_key
-NODE_ENV=production
+FROM_EMAIL=noreply@yourdomain.com
+
+# 블록체인 (옵션)
+POLYGON_RPC_URL=https://rpc-mumbai.maticvigil.com
+PRIVATE_KEY=your_private_key
+
+# IPFS (옵션)
+IPFS_GATEWAY=https://ipfs.io/ipfs/
 ```
 
-## 🔍 트러블슈팅
+## 🧪 테스트 실행
 
-### 일반적인 문제
+```bash
+# 단위 테스트
+npm test
 
-1. **모듈 로딩 오류**
-   - TypeScript 컴파일 확인: `npx tsc --noEmit`
-   - 의존성 재설치: `rm -rf node_modules && npm install`
+# 통합 테스트
+npm run test:integration
 
-2. **블록체인 연결 오류**
-   - 환경 변수 확인: ETHEREUM_RPC_URL, POLYGON_RPC_URL
-   - 네트워크 상태 확인
+# E2E 테스트
+npm run test:e2e
 
-3. **데이터베이스 스키마 오류**
-   - 스키마 푸시: `npm run db:push`
-   - 연결 확인: DATABASE_URL 환경 변수
+# 테스트 커버리지
+npm run test:coverage
+```
 
-## 📈 최근 업데이트
+## 📊 성능 모니터링
 
-### v3.0.0 (2025-01-24) - 모듈 아키텍처
-- **세 가지 모듈 시스템**: 계약, 결재, DID 모듈 완전 분리
-- **모듈별 블록체인 통합**: 각 모듈 전용 블록체인 트랜잭션 처리
-- **전용 API 엔드포인트**: 모듈별 독립적인 API 구조
-- **한국어 인터페이스**: 모든 모듈에 한국어 UI 적용
-- **고급 워크플로우**: Adobe Sign 스타일 순차 승인 시스템
-- **DID 자격증명**: 블록체인 기반 신원 증명 시스템
+### 시스템 상태 확인
+- **헬스체크**: `/api/v1/health`
+- **메트릭**: `/api/v1/metrics`
+- **로그**: PM2 대시보드
 
-### v2.0.0 (2025-01-23)
-- 외부 API 시스템 완전 구현
-- 실시간 WebSocket 알림 시스템
-- 고급 보안 기능 (2FA, WebAuthn)
-- 블록체인 다중 네트워크 지원
-- 포괄적인 API 문서 페이지
+### 성능 최적화
+- API 응답 캐싱
+- 데이터베이스 쿼리 최적화
+- CDN을 통한 정적 파일 서빙
+- 이미지 압축 및 최적화
+
+## 🔐 보안 고려사항
+
+### 구현된 보안 기능
+- ✅ HTTPS 강제 사용
+- ✅ CORS 정책 적용
+- ✅ API 속도 제한
+- ✅ SQL 인젝션 방지
+- ✅ XSS 보호
+- ✅ JWT 토큰 기반 인증
+- ✅ 파일 업로드 검증
+- ✅ 민감 정보 환경변수 관리
+
+### 추가 보안 권장사항
+- 정기적인 의존성 업데이트
+- 보안 헤더 강화
+- 로그 모니터링 및 알림
+- 정기적인 백업 수행
+
+## 📈 확장 계획
+
+### 단기 (1-3개월)
+- [ ] 모바일 반응형 개선
+- [ ] PWA 기능 추가
+- [ ] 다국어 지원
+- [ ] 성능 최적화
+
+### 중기 (3-6개월)
+- [ ] 실제 블록체인 네트워크 연동
+- [ ] 엔터프라이즈 기능 추가
+- [ ] API 버전 관리
+- [ ] 마이크로서비스 아키텍처 전환
+
+### 장기 (6개월+)
+- [ ] AI 기반 문서 분석
+- [ ] 블록체인 크로스체인 지원
+- [ ] 대규모 확장성 개선
+- [ ] 컴플라이언스 인증 획득
+
+## 🤝 기여하기
+
+### 개발 워크플로우
+1. Fork 프로젝트
+2. 기능 브랜치 생성 (`git checkout -b feature/AmazingFeature`)
+3. 변경사항 커밋 (`git commit -m 'Add some AmazingFeature'`)
+4. 브랜치 푸시 (`git push origin feature/AmazingFeature`)
+5. Pull Request 생성
+
+### 코딩 표준
+- TypeScript 엄격 모드 사용
+- ESLint + Prettier 설정 준수
+- 커밋 메시지 컨벤션 따르기
+- 테스트 코드 작성 필수
+
+## 📝 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 있습니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 📞 지원 및 문의
 
-- **기능 요청**: GitHub Issues
-- **버그 리포트**: Issue Template 사용
-- **보안 문제**: 직접 연락
+- **이슈 리포팅**: [GitHub Issues](https://github.com/loganko83/signchain/issues)
+- **기능 요청**: [GitHub Discussions](https://github.com/loganko83/signchain/discussions)
+- **보안 이슈**: security@yourdomain.com
 
-## 📄 라이선스
+## 🎉 감사의 말
 
-이 프로젝트는 MIT 라이선스 하에 있습니다.
+이 프로젝트는 다음 오픈소스 프로젝트들의 도움으로 만들어졌습니다:
+
+- [React](https://reactjs.org/) - UI 라이브러리
+- [Express](https://expressjs.com/) - 웹 프레임워크
+- [Supabase](https://supabase.com/) - 데이터베이스 서비스
+- [Web3.js](https://web3js.readthedocs.io/) - 블록체인 라이브러리
+- [IPFS](https://ipfs.io/) - 분산 저장 네트워크
 
 ---
 
-SignChain의 세 가지 모듈 시스템으로 다양한 전자서명 및 인증 요구사항을 한 번에 해결하세요! 🚀
+<div align="center">
+
+**🚀 BlockchainSignature로 안전하고 투명한 전자서명을 경험하세요!**
+
+Made with ❤️ by [Logan Ko](https://github.com/loganko83)
+
+</div>

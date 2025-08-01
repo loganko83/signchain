@@ -371,34 +371,6 @@ export default function ContractModule() {
       reminders: [] // 리마인더 기록 추가
     };
   };
-        action: "서명 요청 발송",
-        actor: "시스템",
-        timestamp: "2024-01-15T10:35:00",
-        details: "2명의 서명자에게 이메일이 발송되었습니다"
-      },
-      {
-        id: "3",
-        action: "문서 열람",
-        actor: "김철수",
-        timestamp: "2024-01-15T13:30:00",
-        ipAddress: "123.456.789.0"
-      },
-      {
-        id: "4",
-        action: "서명 완료",
-        actor: "김철수",
-        timestamp: "2024-01-15T14:00:00",
-        ipAddress: "123.456.789.0"
-      }
-    ],
-    reminders: [
-      {
-        sentAt: "2024-01-17T09:00:00",
-        sentTo: ["lee@company.com"],
-        type: "auto" as const
-      }
-    ]
-  };
 
   if (showDocumentEditor) {
     return (

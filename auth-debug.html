@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuthContext 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>SignChain AuthContext 디버깅 도구</h1>
+    
+    <div class="status info">
+        <h3>현재 상태</h3>
+        <div id="current-status"></div>
+    </div>
+    
+    <div class="status info">
+        <h3>LocalStorage 데이터</h3>
+        <div id="localStorage-data"></div>
+    </div>
+    
+    <div>
+        <h3>테스트 계정 등록</h3>
+        <input type="text" id="reg-username" placeholder="사용자명" value="testuser2025">
+        <input type="email" id="reg-email" placeholder="이메일" value="testuser2025@example.com">
+        <input type="password" id="reg-password" placeholder="비밀번호" value="password123">
+        <input type="text" id="reg-name" placeholder="이름" value="Test User 2025">
+        <button onclick="register()">회원가입</button>
+    </div>
+    
+    <div>
+        <h3>로그인 테스트</h3>
+        <input type="email" id="login-email" placeholder="이메일" value="testuser2025@example.com">
+        <input type="password" id="login-password" placeholder="비밀번호" value="password123">
+        <button onclick="login()">로그인</button>
+        <button onclick="logout()">로그아웃</button>
+    </div>
+    
+    <div>
+        <h3>API 테스트</h3>
+        <button onclick="checkAuthStatus()">인증 상태 확인</button>
+        <button onclick="testCurrentUser()">현재 사용자 정보</button>
+        <button onclick="clearStorage()">LocalStorage 클리어</button>
+    </div>
+    
+    <div class="status" id="result-area">
+        <h3>결과</h3>
+        <pre id="result"></pre>
+    </div>
+
+    <script>
+        // localStorage 상태 표시
+        function updateStatus() {
+            const token = localStorage.getItem('signchain_token');
+            const user = localStorage.getItem('signchain_user');
+            const refreshToken = localStorage.getItem('signchain_refresh_token');
+            
+            document.getElementById('current-status').innerHTML = `
+                <p><strong>토큰:</strong> ${token ? '존재 (' + token.length + '자)' : '없음'}</p>
+                <p><strong>리프레시 토큰:</strong> ${refreshToken ? '존재' : '없음'}</p>
+                <p><strong>사용자 정보:</strong> ${user ? '존재' : '없음'}</p>
+            `;
+            
+            document.getElementById('localStorage-data').innerHTML = `
+                <p><strong>signchain_token:</strong> ${token || 'null'}</p>
+                <p><strong>signchain_user:</strong> ${user || 'null'}</p>
+                <p><strong>signchain_refresh_token:</strong> ${refreshToken || 'null'}</p>
+            `;
+        }
+        
+        // 결과 표시
+        function showResult(data, isError = false) {
+            const resultArea = document.getElementById('result-area');
+            const result = document.getElementById('result');
+            
+            resultArea.className = 'status ' + (isError ? 'error' : 'success');
+            result.textContent = JSON.stringify(data, null, 2);
+            updateStatus();
+        }
+        
+        // 회원가입
+        async function register() {
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('reg-username').value,
+                        email: document.getElementById('reg-email').value,
+                        password: document.getElementById('reg-password').value,
+                        name: document.getElementById('reg-name').value
+                    })
+                });
+                
+                const data = await response.json();
+                showResult(data, !response.ok);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+        
+        // 로그인
+        async function login() {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-password').value,
+                        rememberMe: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.token && data.user) {
+                    localStorage.setItem('signchain_token', data.token);
+                    localStorage.setItem('signchain_user', JSON.stringify(data.user));
+                    if (data.refreshToken) {
+                        localStorage.setItem('signchain_refresh_token', data.refreshToken);
+                    }
+                }
+                
+                showResult(data, !data.success);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+        
+        // 로그아웃
+        async function logout() {
+            try {
+                const token = localStorage.getItem('signchain_token');
+                if (token) {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+                
+                localStorage.removeItem('signchain_token');
+                localStorage.removeItem('signchain_user');
+                localStorage.removeItem('signchain_refresh_token');
+                
+                showResult({ message: '로그아웃 완료' });
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+        
+        // 인증 상태 확인
+        function checkAuthStatus() {
+            const token = localStorage.getItem('signchain_token');
+            const user = localStorage.getItem('signchain_user');
+            
+            let isValid = false;
+            let tokenInfo = {};
+            
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const currentTime = Date.now() / 1000;
+                    isValid = payload.exp > currentTime;
+                    tokenInfo = {
+                        expires: new Date(payload.exp * 1000),
+                        isValid,
+                        user: payload
+                    };
+                } catch (e) {
+                    tokenInfo = { error: '토큰 파싱 실패' };
+                }
+            }
+            
+            showResult({
+                hasToken: !!token,
+                hasUser: !!user,
+                tokenInfo,
+                userData: user ? JSON.parse(user) : null
+            });
+        }
+        
+        // 현재 사용자 정보 API 테스트
+        async function testCurrentUser() {
+            try {
+                const token = localStorage.getItem('signchain_token');
+                if (!token) {
+                    showResult({ error: '토큰이 없습니다' }, true);
+                    return;
+                }
+                
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                showResult(data, !response.ok);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+        
+        // localStorage 클리어
+        function clearStorage() {
+            localStorage.clear();
+            showResult({ message: 'LocalStorage 클리어 완료' });
+        }
+        
+        // 페이지 로드시 상태 업데이트
+        updateStatus();
+    </script>
+</body>
+</html>

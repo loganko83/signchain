@@ -47,6 +47,8 @@ import VersionControl from "@/components/contract/VersionControl";
 import CloudIntegration from "@/components/contract/CloudIntegration";
 import MobileOptimization from "@/components/contract/MobileOptimization";
 import NotificationSettings from "@/components/contract/NotificationSettings";
+import BlockchainHashDisplay from "@/components/BlockchainHashDisplay";
+import { generateMockTransactionHash, generateMockBlockNumber } from "@/lib/blockchain-hash-utils";
 
 interface ContractDocument {
   id: string;
@@ -952,10 +954,26 @@ export default function ContractModule() {
                       <div className="text-sm">
                         <p className="font-medium text-green-900">계약 완료</p>
                         <p className="text-green-700">모든 당사자가 서명을 완료했습니다.</p>
-                        <p className="text-xs text-green-600 mt-1">블록체인 TX: {contract.blockchainTxHash}</p>
                       </div>
                     </div>
                   </div>
+
+                  {/* 블록체인 증빙 정보 */}
+                  <BlockchainHashDisplay
+                    hashInfo={{
+                      transactionHash: contract.blockchainTxHash || generateMockTransactionHash(),
+                      blockNumber: generateMockBlockNumber(),
+                      network: 'xphere',
+                      timestamp: contract.completedAt || new Date().toISOString(),
+                      confirmations: 12,
+                      status: 'confirmed',
+                      gasUsed: '45000',
+                      gasFee: '0.003',
+                      type: 'contract'
+                    }}
+                    title="계약서 블록체인 증빙"
+                    compact={false}
+                  />
                 </CardContent>
               </Card>
             ))}

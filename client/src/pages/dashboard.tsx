@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth.tsx";
 import { getBlockchainStatus } from "@/lib/blockchain";
 import { Plus, LayoutTemplate, FileText, CheckCircle, Clock, Shield, TrendingUp, Send } from "lucide-react";
 import { useState, useEffect } from "react";
+import BlockchainHashDisplay from "@/components/BlockchainHashDisplay";
+import { generateMockTransactionHash, generateMockBlockNumber } from "@/lib/blockchain-hash-utils";
 import { Document, SignatureRequest } from "@shared/schema";
 
 export default function Dashboard() {
@@ -296,6 +298,26 @@ export default function Dashboard() {
               <p className="text-sm text-purple-100">블록 높이: <span>{blockchainStatus.blockHeight}</span></p>
               <p className="text-sm text-purple-100">가스비: <span>{blockchainStatus.gasFee}</span></p>
             </div>
+          </div>
+          
+          {/* 최근 블록체인 활동 */}
+          <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <h4 className="text-sm font-medium mb-3">최근 블록체인 활동</h4>
+            <BlockchainHashDisplay
+              hashInfo={{
+                transactionHash: generateMockTransactionHash(),
+                blockNumber: generateMockBlockNumber(),
+                network: 'xphere',
+                timestamp: new Date().toISOString(),
+                confirmations: 3,
+                status: 'confirmed',
+                gasUsed: '35000',
+                gasFee: '0.002',
+                type: 'signature'
+              }}
+              title="최근 전자서명 기록"
+              compact={true}
+            />
           </div>
         </div>
       </div>

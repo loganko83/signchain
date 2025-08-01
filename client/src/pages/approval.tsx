@@ -11,6 +11,8 @@ import { CheckSquare, Users, Mail, ArrowRight, Clock, CheckCircle, Settings, Bar
 import { useAuth } from "@/lib/auth";
 import { ERPApprovalDashboard } from "@/components/approval/ERPApprovalDashboard";
 import { AdvancedApprovalSettings } from "@/components/approval/AdvancedApprovalSettings";
+import BlockchainHashDisplay from "@/components/BlockchainHashDisplay";
+import { generateMockTransactionHash, generateMockBlockNumber } from "@/lib/blockchain-hash-utils";
 
 export default function ApprovalModule() {
   const { user } = useAuth();
@@ -555,8 +557,30 @@ export default function ApprovalModule() {
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="font-semibold">최종 완료</h4>
-                <p className="text-sm text-gray-600">문서 다운로드</p>
+                <p className="text-sm text-gray-600">블록체인 증빙 완료</p>
               </div>
+            </div>
+            
+            {/* 완료된 승인 프로세스 예시 (데모) */}
+            <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-2">승인 완료 예시</h4>
+              <p className="text-sm text-green-700 mb-4">모든 승인 단계가 완료되면 블록체인에 최종 증빙이 기록됩니다.</p>
+              
+              <BlockchainHashDisplay
+                hashInfo={{
+                  transactionHash: generateMockTransactionHash(),
+                  blockNumber: generateMockBlockNumber(),
+                  network: 'xphere',
+                  timestamp: new Date().toISOString(),
+                  confirmations: 8,
+                  status: 'confirmed',
+                  gasUsed: '45000',
+                  gasFee: '0.003',
+                  type: 'approval'
+                }}
+                title="승인 워크플로우 블록체인 증빙"
+                compact={true}
+              />
             </div>
           </CardContent>
         </Card>

@@ -98,7 +98,7 @@ git commit -m "remove: [삭제 사유]"
 #### GitHub 동기화
 ```powershell
 # Personal Access Token 인증
-$env:GH_TOKEN = "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"
+$env:GH_TOKEN = "[보안상 제거됨]"
 
 # 변경사항 푸시
 git push origin main
@@ -148,7 +148,7 @@ sudo pm2 restart signchain
 - `/var/www/html/signchain/` (웹 서비스 배포 경로)
 
 ### 🔐 보안 정보
-- **GitHub Token**: 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
+- **GitHub Token**: [보안상 제거됨]
 - **테스트 계정**: test@example.com / password123
 
 ## 📋 표준 작업 절차

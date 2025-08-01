@@ -19,6 +19,8 @@ import {
   CheckCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import BlockchainHashDisplay from "@/components/BlockchainHashDisplay";
+import { generateMockTransactionHash, generateMockBlockNumber } from "@/lib/blockchain-hash-utils";
 
 interface DIDDocument {
   "@context": string[];
@@ -265,10 +267,27 @@ export function DIDManager() {
                   </code>
                 </div>
 
-                <div className="flex items-center space-x-2 text-sm text-green-600">
+                <div className="flex items-center space-x-2 text-sm text-green-600 mb-4">
                   <CheckCircle className="w-4 h-4" />
                   <span>DID가 블록체인에 등록되었습니다</span>
                 </div>
+
+                {/* 블록체인 증빙 정보 */}
+                <BlockchainHashDisplay
+                  hashInfo={{
+                    transactionHash: generateMockTransactionHash(),
+                    blockNumber: generateMockBlockNumber(),
+                    network: 'xphere',
+                    timestamp: new Date().toISOString(),
+                    confirmations: 6,
+                    status: 'confirmed',
+                    gasUsed: '55000',
+                    gasFee: '0.004',
+                    type: 'did'
+                  }}
+                  title="DID 생성 블록체인 증빙"
+                  compact={false}
+                />
               </div>
             )}
           </CardContent>

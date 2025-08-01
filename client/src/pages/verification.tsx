@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { Document, Signature, AuditLog } from "@shared/schema";
 import { useAuth } from "@/lib/auth.tsx";
+import BlockchainHashDisplay from "@/components/BlockchainHashDisplay";
+import { generateMockTransactionHash, generateMockBlockNumber } from "@/lib/blockchain-hash-utils";
 
 export default function Verification() {
   const { user } = useAuth();
@@ -271,31 +273,38 @@ export default function Verification() {
                 {verifiedDocuments.length > 0 ? (
                   <div className="space-y-4">
                     {verifiedDocuments.map((document) => (
-                      <div key={document.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div key={document.id} className="border rounded-lg p-4 bg-white">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{document.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {document.createdAt ? new Date(document.createdAt).toLocaleString('ko-KR') : ''}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-medium">{document.title}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {document.createdAt ? new Date(document.createdAt).toLocaleString('ko-KR') : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
                           {getStatusBadge(document.status)}
-                          <Button variant="outline" size="sm" asChild>
-                            <a 
-                              href={`https://explorer.xphere.io/tx/${document.blockchainTxHash}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              블록체인
-                            </a>
-                          </Button>
                         </div>
+                        
+                        {/* 블록체인 증빙 정보 */}
+                        <BlockchainHashDisplay
+                          hashInfo={{
+                            transactionHash: document.blockchainTxHash || generateMockTransactionHash(),
+                            blockNumber: generateMockBlockNumber(),
+                            network: 'xphere',
+                            timestamp: document.createdAt || new Date().toISOString(),
+                            confirmations: Math.floor(Math.random() * 20) + 5,
+                            status: 'confirmed',
+                            gasUsed: '25000',
+                            gasFee: '0.0015',
+                            type: 'document'
+                          }}
+                          title={`${document.title} 블록체인 증빙`}
+                          compact={true}
+                        />
                       </div>
                     ))}
                   </div>

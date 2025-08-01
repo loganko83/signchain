@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { FileText, FileCheck, Shield, Key, Book, Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth.tsx";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 

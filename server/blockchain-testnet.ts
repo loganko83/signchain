@@ -30,8 +30,22 @@ export class BlockchainTestnetService {
   }
 
   private initializeTestnets() {
-    // 다양한 테스트넷 설정
+    // 다양한 테스트넷 설정 (Xphere 네트워크 추가)
     const testnets: TestnetConfig[] = [
+      {
+        name: 'xphere-testnet',
+        rpcUrl: 'https://xphere-rpc.com',
+        chainId: 10001, // Xphere 테스트넷 체인 ID
+        explorerUrl: 'https://explorer.xphere.io',
+        gasPrice: '1.0'
+      },
+      {
+        name: 'xphere-ankr',
+        rpcUrl: 'https://ankr.com/rpc/xphere',
+        chainId: 10001,
+        explorerUrl: 'https://explorer.xphere.io',
+        gasPrice: '1.0'
+      },
       {
         name: 'polygon-mumbai',
         rpcUrl: 'https://polygon-mumbai.blockpi.network/v1/rpc/public',

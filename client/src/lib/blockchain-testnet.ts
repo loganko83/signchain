@@ -136,12 +136,14 @@ export async function sendTestTransaction(network: string): Promise<any> {
 // Utility Functions
 export function getExplorerUrl(network: string, txHash: string): string {
   const explorerUrls: Record<string, string> = {
+    'xphere-testnet': 'https://explorer.xphere.io',
+    'xphere-ankr': 'https://explorer.xphere.io',
     'polygon-mumbai': 'https://mumbai.polygonscan.com',
     'ethereum-sepolia': 'https://sepolia.etherscan.io',
     'bsc-testnet': 'https://testnet.bscscan.com',
   };
   
-  const baseUrl = explorerUrls[network] || 'https://testnet.bscscan.com';
+  const baseUrl = explorerUrls[network] || 'https://explorer.xphere.io';
   return `${baseUrl}/tx/${txHash}`;
 }
 
@@ -159,6 +161,8 @@ export function formatBalance(balance: string): string {
 
 export function getNetworkName(network: string): string {
   const names: Record<string, string> = {
+    'xphere-testnet': 'Xphere Testnet',
+    'xphere-ankr': 'Xphere (Ankr)',
     'polygon-mumbai': 'Polygon Mumbai',
     'ethereum-sepolia': 'Ethereum Sepolia',
     'bsc-testnet': 'BSC Testnet',

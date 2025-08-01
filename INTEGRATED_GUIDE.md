@@ -97,8 +97,8 @@ git commit -m "remove: [삭제 사유]"
 
 #### GitHub 동기화
 ```powershell
-# Personal Access Token 인증
-$env:GH_TOKEN = "[보안상 제거됨]"
+# Personal Access Token 인증 (실제 토큰은 환경변수나 보안 저장소에서 관리)
+$env:GH_TOKEN = "[YOUR_PERSONAL_ACCESS_TOKEN_HERE]"
 
 # 변경사항 푸시
 git push origin main

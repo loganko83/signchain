@@ -1,0 +1,1 @@
+import{r as o}from"./react-vendor-Dzt9N-8P.js";const s=()=>{const t=localStorage.getItem("user");return t?JSON.parse(t):null},a=()=>{const[t,e]=o.useState(s());return{user:t,login:r=>{localStorage.setItem("user",JSON.stringify(r)),e(r)},logout:()=>{localStorage.removeItem("user"),e(null)},isAuthenticated:t!==null}};export{a as u};

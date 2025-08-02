@@ -17,7 +17,8 @@
 - 날짜별 진행상황은 `progress_{날짜}.md` 파일에 기록
 - 각 작업 완료 시 git commit 수행
 - **최신 진행 파일**: 
-  - `progress_2025-07-31_final.md` (오늘 최종 작업 완료)
+  - `progress_2025-08-02.md` (🎉 완전 배포 완료!)
+  - `progress_2025-07-31_final.md` (최종 작업 완료)
   - `progress_2025-07-31.md` (전체 작업 기록)
 
 ## 개발 환경
@@ -27,13 +28,14 @@
 - **PowerShell 명령어**: `npm run dev:all` (동시 실행)
 
 ## 서버 정보
-- **메인 URL**: https://trendy.storydot.kr/signchain/ ✅ 정상 운영
+- **메인 URL**: https://trendy.storydot.kr/signchain/ ✅ 정상 운영 (2025-08-02 최신 배포)
 - **API URL**: https://trendy.storydot.kr/signchain/api/v1/
 - **헬스체크**: https://trendy.storydot.kr/signchain/api/v1/health ✅ 정상
 - **서버**: AWS EC2 (Ubuntu)
-- **경로**: `/var/www/html/signchain`
-- **프로세스 관리**: PM2 (signchain 서비스, 2h+ 안정 운영)
+- **배포 경로**: `/var/www/storage/signchain` (새 스토리지 폴더 20GB)
+- **프로세스 관리**: PM2 (signchain 서비스, PID: 542057, 온라인 상태)
 - **웹서버**: Apache + 리버스 프록시
+- **최신 배포**: 2025-08-02 15:52 (14개 커밋 동기화 완료)
 
 ## Git 저장소 & 워크플로우
 - **GitHub**: https://github.com/loganko83/signchain

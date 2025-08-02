@@ -140,6 +140,168 @@ export default function ContractModule() {
     }).length
   };
 
+  // 미리보기 핸들러
+  const handlePreviewDocument = async (contract: ContractDocument) => {
+    try {
+      // IPFS 게이트웨이를 통해 문서 미리보기
+      const previewUrl = contract.ipfsGatewayUrl || 
+        (contract.ipfsHash ? `https://gateway.pinata.cloud/ipfs/${contract.ipfsHash}` : null);
+      
+      if (previewUrl) {
+        window.open(previewUrl, '_blank');
+      } else {
+        // 로컬 파일 미리보기
+        const response = await fetch(`/api/documents/${contract.id}/preview`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          // 메모리 정리를 위해 5초 후 URL 해제
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } else {
+          throw new Error('미리보기를 불러올 수 없습니다');
+        }
+      }
+      
+      toast({
+        title: "미리보기 열림",
+        description: "새 탭에서 문서 미리보기가 열렸습니다."
+      });
+    } catch (error) {
+      toast({
+        title: "미리보기 실패",
+        description: "문서 미리보기를 열 수 없습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 리마인더 전송 핸들러
+  const handleSendReminder = async (contract: ContractDocument) => {
+    try {
+      const unsignedSigners = contract.signers.filter(s => !s.signed);
+      
+      if (unsignedSigners.length === 0) {
+        toast({
+          title: "리마인더 불필요",
+          description: "모든 서명자가 이미 서명을 완료했습니다."
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/documents/${contract.id}/reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          signerEmails: unsignedSigners.map(s => s.email),
+          message: `${contract.title} 계약서의 서명이 필요합니다. 서명을 완료해 주세요.`
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "리마인더 전송 완료",
+          description: `${unsignedSigners.length}명의 서명자에게 리마인더를 전송했습니다.`
+        });
+      } else {
+        throw new Error('리마인더 전송에 실패했습니다');
+      }
+    } catch (error) {
+      toast({
+        title: "리마인더 전송 실패",
+        description: "리마인더 전송 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 계약서 다운로드 핸들러
+  const handleDownloadContract = async (contract: ContractDocument) => {
+    try {
+      const response = await fetch(`/api/documents/${contract.id}/download`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = contract.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "다운로드 완료",
+          description: `${contract.fileName} 파일이 다운로드되었습니다.`
+        });
+      } else {
+        throw new Error('다운로드에 실패했습니다');
+      }
+    } catch (error) {
+      toast({
+        title: "다운로드 실패",
+        description: "파일 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 블록체인 검증 핸들러
+  const handleBlockchainVerify = async (contract: ContractDocument) => {
+    try {
+      if (!contract.txHash) {
+        toast({
+          title: "검증 불가",
+          description: "이 계약서는 아직 블록체인에 기록되지 않았습니다.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "블록체인 검증 중",
+        description: "트랜잭션을 조회하고 있습니다..."
+      });
+
+      const response = await fetch(`/api/blockchain/verify/${contract.txHash}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
+      if (response.ok) {
+        const verification = await response.json();
+        
+        if (verification.success) {
+          toast({
+            title: "검증 성공",
+            description: `블록체인 검증이 완료되었습니다. 블록 높이: ${verification.data.blockNumber}`
+          });
+          
+          // 추후 검증 결과 모달 구현 가능
+        } else {
+          throw new Error(verification.message || '검증에 실패했습니다');
+        }
+      } else {
+        throw new Error('블록체인 조회에 실패했습니다');
+      }
+    } catch (error) {
+      toast({
+        title: "검증 실패",
+        description: "블록체인 검증 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -910,12 +1072,20 @@ export default function ContractModule() {
                       <History className="w-4 h-4 mr-2" />
                       추적
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handlePreviewDocument(contract)}
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       미리보기
                     </Button>
                     {contract.status === "partially_signed" && (
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleSendReminder(contract)}
+                      >
                         <Mail className="w-4 h-4 mr-2" />
                         리마인더
                       </Button>
@@ -985,16 +1155,27 @@ export default function ContractModule() {
                   <Separator />
 
                   <div className="flex items-center gap-2">
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => handleDownloadContract(contract)}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       최종본 다운로드
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handlePreviewDocument(contract)}
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       미리보기
                     </Button>
-                    <Button size="sm" variant="outline">
-                      <Shield className="w-4 h-4 mr-2" />
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleBlockchainVerify(contract)}
+                    >
+                      <Shield className="w-4 w-4 mr-2" />
                       블록체인 검증
                     </Button>
                     <Button 

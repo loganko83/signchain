@@ -2,8 +2,23 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { 
+  securityHeaders, 
+  corsConfig, 
+  requestSizeLimit,
+  apiRateLimit 
+} from "./middleware/security";
 
 const app = express();
+
+// 보안 미들웨어 적용 (가장 먼저)
+app.use(securityHeaders);
+app.use(corsConfig);
+app.use(requestSizeLimit);
+
+// API 요청에 Rate Limiting 적용
+app.use('/api', apiRateLimit);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

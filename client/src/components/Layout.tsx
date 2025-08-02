@@ -16,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { MobileMenu } from "@/components/ui/mobile-menu";
 import { PWAInstallButton } from "@/components/ui/pwa-install-button";
+import LazyImage from "@/components/LazyImage";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { useAuth } from "@/lib/auth.tsx";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
@@ -319,6 +321,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </footer>
+      
+      {/* Performance Monitor (개발 환경에서만 표시) */}
+      <PerformanceMonitor enabled={import.meta.env.DEV} showOverlay={true} />
     </div>
   );
 }

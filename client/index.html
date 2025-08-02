@@ -1,12 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="블록체인 기반 전자서명 플랫폼으로 더 안전하고 투명한 계약을 시작하세요" />
+    <meta name="keywords" content="전자서명, 블록체인, 계약, 문서, 서명, 보안, DID" />
+    <meta name="author" content="SignChain" />
+    
+    <!-- PWA App Meta -->
+    <meta name="application-name" content="SignChain" />
+    <meta name="apple-mobile-web-app-title" content="SignChain" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-navbutton-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/signchain/manifest.json" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/signchain/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/signchain/icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" href="/signchain/icons/icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/signchain/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/signchain/icons/icon-144x144.png" />
+    
+    <!-- Security -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    
+    <title>SignChain - 블록체인 전자서명 플랫폼</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/signchain/sw.js', {
+            scope: '/signchain/'
+          })
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+            
+            // 업데이트 확인
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // 새 버전 사용 가능 알림
+                  if (confirm('새로운 버전이 사용 가능합니다. 새로고침하시겠습니까?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            });
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+
+      // PWA 설치 프롬프트
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log('PWA 설치 가능');
+      });
+
+      // PWA 설치 완료
+      window.addEventListener('appinstalled', (evt) => {
+        console.log('PWA 설치 완료');
+      });
+    </script>
+    
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>

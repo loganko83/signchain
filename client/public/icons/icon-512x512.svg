@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#gradient1)" stroke="url(#gradient2)" stroke-width="4"/>
+  
+  <!-- Document Icon -->
+  <path d="M160 120 L320 120 C332 120 352 130 352 140 L352 380 C352 390 332 400 320 400 L160 400 C148 400 128 390 128 380 L128 140 C128 130 148 120 160 120 Z" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Document Lines -->
+  <rect x="160" y="160" width="160" height="8" rx="4" fill="#2563eb"/>
+  <rect x="160" y="180" width="120" height="6" rx="3" fill="#64748b"/>
+  <rect x="160" y="200" width="140" height="6" rx="3" fill="#64748b"/>
+  <rect x="160" y="220" width="100" height="6" rx="3" fill="#64748b"/>
+  
+  <!-- Signature Line -->
+  <path d="M180 280 Q200 270 220 280 T260 280" stroke="#2563eb" stroke-width="3" fill="none"/>
+  <path d="M270 280 Q290 270 310 280" stroke="#2563eb" stroke-width="3" fill="none"/>
+  
+  <!-- Blockchain Chain Link -->
+  <circle cx="200" cy="320" r="20" fill="none" stroke="#2563eb" stroke-width="4"/>
+  <circle cx="240" cy="320" r="20" fill="none" stroke="#2563eb" stroke-width="4"/>
+  <circle cx="280" cy="320" r="20" fill="none" stroke="#2563eb" stroke-width="4"/>
+  
+  <!-- Chain Connection Lines -->
+  <rect x="220" y="317" width="20" height="6" fill="#2563eb"/>
+  <rect x="260" y="317" width="20" height="6" fill="#2563eb"/>
+  
+  <!-- Security Shield -->
+  <path d="M360 200 L360 180 C360 170 350 160 340 160 L320 160 C310 160 300 170 300 180 L300 200 L295 200 C290 200 285 205 285 210 L285 240 C285 245 290 250 295 250 L365 250 C370 250 375 245 375 240 L375 210 C375 205 370 200 365 200 L360 200 Z" fill="#10b981"/>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
